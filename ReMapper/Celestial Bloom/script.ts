@@ -216,6 +216,8 @@ function exportMap(diff: Difficulty) {
     diff.require("Noodle Extensions", false)
     diff.settings = PRESET.CHROMA_SETTINGS;
     diff.setSetting(SETTINGS.NO_HUD, true);
+    diff.setSetting(SETTINGS.MAX_SHOCKWAVE_PARTICLES, 0);
+    diff.setSetting(SETTINGS.NO_FAIL, true);
     diff.colorLeft = [0.422, 0.422, 0.422];
     diff.colorRight = [0.281, 0.687, 0.944];
     diff.notes.forEach(x => {
