@@ -137,16 +137,31 @@ let appends: [string, number, Record<string, any>][] = [
     ["mainLight", 614, {
         _position: [0, 20, 0]
     }],
-    ["mainLight", 670, {
+    ["mainLight", 630, {
+        _position: [0, -10, 0]
+    }],
+    ["mainLight", 654, {
         _position: [0, -50, 0]
+    }],
+    ["mainLight", 662, {
+        _position: [0, 20, 0]
+    }],
+    ["mainLight", 670, {
+        _position: [0, -80, 0]
     }],
     ["mainLight", 678, {
         _position: [0, 0, 0]
     }],
     ["mainLight", 709, {
-        _position: [0, -60, 0]
+        _position: [0, 10, 0]
     }],
     // Sub light
+    ["subLight", 358, {
+        _position: [8, -8, 0]
+    }],
+    ["subLight", 390, {
+        _position: [40, 20, 0]
+    }],
     ["subLight", 582, {
         _position: [83, -170, 0]
     }]
@@ -182,7 +197,7 @@ const dirLight2: [number, KeyframesVec3, number?][] = [
     [230, [-70, 180 - 90, 0]],
     [358, [-45, -180, 0]],
     [550, [0, -90, 0]],
-    [582, [-20, 180 - 50, 0]],
+    [582, [-10, 180 - 50, 0]],
     [614, [20, 180 - 20, 0]],
     [630, [-20, 180 - 20, 0]],
     [638, [-20, -140, 0]],
@@ -300,7 +315,7 @@ let waterWall = new Wall();
 waterWall.life = 550 - 518;
 waterWall.lifeStart = 518;
 waterWall.trackSet = "wall";
-waterWall.color = [...[0.482, 0.698, 0.686].map(x => x * 2) as Vec3, 20];
+waterWall.color = [...[0.482, 0.698, 0.686].map(x => x * 1) as Vec3, 20];
 waterWall.animate.definitePosition = [[0, 0, 0, 0], [0, 0, 15, 1]];
 waterWall.scale = [wallDetail, wallDetail, wallDetail];
 waterWall.interactable = false;
@@ -525,7 +540,7 @@ new LightRemapper(EVENT.LEFT_LASERS).normalizeLinear(1, 3).addToEnd(100).multipl
 // Bloom Lasers
 new LightRemapper(EVENT.RIGHT_LASERS).normalizeLinear(1, 3).addToEnd(100).multiplyColor(3 / 2, 1).setType(2).run();
 // Main Light
-new LightRemapper(EVENT.CENTER_LASERS, 2).setType(2).setLightID([201, 202]).multiplyColor(6 / 2, 1).run();
+new LightRemapper(EVENT.CENTER_LASERS, 2).setType(2).setLightID([201, 202]).multiplyColor(3 * 0.4, 1).run();
 // Sub Light
 new LightRemapper(EVENT.CENTER_LASERS, 1).setType(1).setLightID(201).multiplyColor(6, 1).run();
 

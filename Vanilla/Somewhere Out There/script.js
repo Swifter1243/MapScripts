@@ -1,4 +1,5 @@
-const mapInput = "ExpertPlusStandard.dat"
+const mapInput = "ExpertPlusLawless.dat"
+const expertInput = "ExpertStandard_Old.dat";
 
 const fs = require("fs");
 const { off } = require("process");
@@ -9,6 +10,11 @@ const glowLightToUnit = 0.0012;
 const solidLightToUnit = 0.00024;
 const lyricSpace = 0.2;
 let transforms = {};
+
+// Transfer lights
+let ex = JSON.parse(fs.readFileSync(expertInput));
+ex._events = map._events;
+fs.writeFileSync(expertInput, JSON.stringify(ex), null, 0);
 
 /*
 TODO:
@@ -150,8 +156,6 @@ function movePlayer(position, rotation, timestamps, easing, parentEnv) {
 	let time = timestamps[0][1];
 	let endTime = timestamps[timestamps.length - 1][1];
 	let positions = [];
-
-	time += 0.069;
 
 	timestamps.forEach(y => {
 		let keyframe = findKeyframe(time, endTime - time, y[1]);
@@ -653,11 +657,6 @@ map._customData._environment = [
 		_scale: [2, 1, 2],
 		_position: [0, 5, 0],
 		_rotation: [0, 180, 0]
-	},
-	{
-		_id: "CoreLighting.\\[3\\]DirectionalLight$",
-		_lookupMethod: "Regex",
-		_group: "mountainLight"
 	}
 ]
 
@@ -690,7 +689,7 @@ LIGHT TYPES:
 */
 
 // Registering light stuff
-registerLight(true, [0, 0, 500], [0, 0, 0], [1000000, 4, 1], 50, "backlight", true) // Backlight: (1)
+registerLight(true, [0, -5000, 500], [0, 0, 0], [1000000, 4, 1], 50, "backlight", true) // Backlight: (1)
 registerLight(false, [5, 10, 50], [0, 0, -90], [1, 100, 1], 50, "mainGlow", true) // Main glow: (4)
 registerLight(false, [-5, 10, 50], [0, 0, 90], [1, 100, 1], 51, "mainGlow", true) // Main glow: (4)
 registerLight(false, [0, 5, 50], [0, 0, 0], [1, 0.0001, 1], 52, "subGlow", true) // Sub glow: (4)
@@ -704,30 +703,32 @@ for (i = 0; i <= 9; i++) {
 }
 
 for (i = 0; i <= 7; i++) {
-	registerLight(false, [0, 0, 0], [0, 0, 0], [1, 1, 1], 80, `glow2${i}`, true) // Secondary Glow Lasers (4) (80-89)
+	registerLight(false, [0, 0, 100], [0, 0, 0], [1, 1, 1], 80, `glow2${i}`, true) // Secondary Glow Lasers (4) (80-89)
 }
 
 
 let sides = {};
 let preRegisterAnimations = [];
 
+const updateBoost = 2;
+
 map._events.forEach(x => {
 	// Backlight
 	if (x._customData && x._type == 0 && ((x._customData && isInID(x._customData._lightID, 1, 1)) || x._value == 0) && x._time >= 1) {
 		if (!x._customData._lightID) x._customData._lightID = 0;
-		recolor(x, 1, 3);
+		recolor(x, 0.75, 3);
 		eventToNewID(x, 1, 50, 1);
 	}
 	// Main Glow
 	if (x._customData && x._type == 4 && !x._customData._lightID && x._time > 1) {
 		x._customData._lightID = 1;
-		recolor(x, 5, 4);
+		recolor(x, 5 * updateBoost, 4);
 		eventToNewID(x, 1, [50, 51], 4);
 	}
 	// Sub Glow
 	if (x._customData && x._type == 4 && ((x._customData && isInID(x._customData._lightID, 1, 1)) || x._value == 0) && x._time >= 1) {
 		if (!x._customData._lightID) x._customData._lightID = 0;
-		recolor(x, 5, 5);
+		recolor(x, 5 * updateBoost, 5);
 		eventToNewID(x, 1, 52, 4);
 	}
 	// Solid Lasers
@@ -760,7 +761,7 @@ map._events.forEach(x => {
 			}])
 		}
 
-		recolor(x, 2, 1);
+		recolor(x, 2 * updateBoost, 1);
 		eventToNewID(x, 0, 60, 1);
 	}
 	// Glow Lasers
@@ -771,7 +772,7 @@ map._events.forEach(x => {
 		x._customData._lightID = lightID;
 		if (!lightID) x._customData._lightID = 0;
 
-		recolor(x, 15, 0.3);
+		recolor(x, 15 * updateBoost, 0.3);
 		eventToNewID(x, 0, 60, 4);
 	}
 	// Secondary Glow Lasers
@@ -784,7 +785,7 @@ map._events.forEach(x => {
 
 		x._time += 0.01;
 
-		recolor(x, 4, 1);
+		recolor(x, 4 * updateBoost, 1);
 		eventToNewID(x, 0, 80, 4);
 	}
 })
@@ -817,7 +818,7 @@ appends.push(
 	}],
 	["highClouds", 582, {
 		_scale: [1, 1, 1],
-		_position: [0, 50, -20]
+		_position: [0, 50, -100]
 	}],
 	["highClouds", 614, {
 		_scale: [0, 0, 0]
@@ -858,15 +859,16 @@ appends.push(
 		_position: [0, -8, 0]
 	}],
 	["mainGlow", 710, {
-		_position: [0, 8, 0]
+		_position: [0, -4, 0]
 	}],
 	["backlight", 0, {
-		_position: [0, -100, -500],
-		_rotation: [20, 0, 0]
+		_position: [0, 0, -400],
 	}],
 	["backlight", 582, {
 		_position: [0, -1000, 0],
-		_rotation: [0, 0, 0]
+	}],
+	["backlight", 614, {
+		_position: [0, -1000, 300]
 	}],
 	["backlight", 646, {
 		_position: [0, 0, 200]
@@ -906,15 +908,6 @@ animateGroup([
 	}],
 	["lowClouds", 678, 0, {
 		_scale: [0, 0, 0]
-	}],
-	["mountainLight", 0, 0, {
-		_rotation: [0, 355, -180]
-	}],
-	["mountainLight", 454, 518 - 454, {
-		_rotation: [[18, 181, 180, 0], [2, 355, 180, 1, "easeInExpo"]]
-	}],
-	["mountainLight", 710, 0, {
-		_rotation: [180, 0, 180]
 	}]
 ])
 
@@ -977,7 +970,7 @@ for (let i = 0; i < totalCubes; i++) {
 let monolithPlayerHeight = 124;
 
 movePlayer([0, 1000, 0], [0, 0, 0], [[0, 0]], "easeLinear", true); // Intro
-movePlayer([0, 0, 0], [0, 0, 0], [[0, 262], [0, 312], [-500, 312], [-500, 312.25], [0, 312.25], [0, 325], [500, 454]], "easeInSine", true); // Buildup
+movePlayer([0, 0, 0], [0, 0, 0], [[0, 262], [0, 312], [-10, 312.125], [-10, 312.25], [0, 312.25], [0, 325], [500, 454]], "easeInSine", true); // Buildup
 movePlayer([-48.996569980145935, 30.53325995503284, 9.674587313580925], [-7.3782344, 56.93054, 31.138575], [[0, 454]], "easeLinear", false); // Foggy Mountain
 movePlayer([0, monolithPlayerHeight, 0], [0, 0, 0], [[0, 518], [100, 550]], "easeLinear", true); // Drop part 1
 movePlayer([0, 1000, 0], [0, 0, 0], [[0, 550], [100, 582]], "easeLinear", true); // Drop part 2
@@ -1010,7 +1003,7 @@ animateLyrics(283, transforms["lyrics2"]);
 animateLyrics(291, transforms["lyrics0"]);
 animateLyrics(308, transforms["lyrics1"]);
 animateLyrics(315, transforms["lyrics2"]);
-animateLyrics(824.5, { _position: [0, 4, 30], _rotation: [0, 0, 0] });
+animateLyrics(824.5, { _position: [0, 3, 30], _rotation: [0, 0, 0] });
 
 animateGroup(preRegisterAnimations);
 
@@ -1069,21 +1062,73 @@ registeredEnv.forEach(x => {
 	if (x._group) delete x._group;
 });
 
+map._customData._customEvents.push({
+	_time: 0,
+	_type: "AssignFogTrack",
+	_data: {
+		_track: "fog"
+	}
+})
+
+function animateFog(callback, time, duration = 0) {
+	const event = {
+		_time: time,
+		_type: "AnimateTrack",
+		_data: {
+			_track: "fog",
+			_duration: duration
+		}
+	}
+	callback(event._data);
+	map._customData._customEvents.push(event);
+}
+
+// Monoliths
+animateFog(x => {
+	x._height = [50];
+	x._startY = [-80];
+}, 518)
+
+// Abstract - Forest - Supernova
+animateFog(x => {
+	x._height = [0];
+	x._startY = [-69420];
+}, 550)
+
+// Mountains
+animateFog(x => {
+	x._height = [5];
+	x._startY = [-5];
+}, 646)
+
+// Rainbow
+animateFog(x => {
+	x._height = [0];
+	x._startY = [-69420];
+	x._attenuation = [0.001]
+}, 678)
+
+// Outro
+animateFog(x => {
+	x._height = [5];
+	x._startY = [-5];
+}, 710)
+
 // MAWNTEE CODE
 //#region
 
 // I moved this up here so it don't fuck with my shit lol thanks in advance bestie <333
 map._notes.forEach(x => {
-    if (!x._customData) x._customData = {};
-    x._customData._track = "noteChild";
-    x._customData._disableSpawnEffect = true;
-    if (x._type == 3) x._customData._color = [0.59, 0.496, 0.35, 1];
+	if (!x._customData) x._customData = {};
+	x._customData._track = "noteChild";
+	x._customData._disableSpawnEffect = true;
+	if (x._type == 3) x._customData._color = [0.59, 0.496, 0.35, 1];
 })
 
 // ignore this dumb shit
 let difficulty = map;
 if (!difficulty._customData) {
-    difficulty._customData = { _pointDefinitions: [], _customEvents: [], _environment: [] };
+	difficulty._customData = { _pointDefinitions: [], _customEvents: [], _environment: [] };
 }
 const _customData = difficulty._customData;
 if (!difficulty._customData._pointDefinitions) { difficulty._customData._pointDefinitions = []; }
@@ -1099,30 +1144,30 @@ const _environment = _customData._environment;
 let filterednotes;
 
 _obstacles.forEach(wall => {
-    if (!wall._customData) {
-        wall._customData = {};
-    }
+	if (!wall._customData) {
+		wall._customData = {};
+	}
 });
 
 _notes.forEach(note => {
-    if (!note._customData) {
-        note._customData = {};
-    }
+	if (!note._customData) {
+		note._customData = {};
+	}
 });
 
 function rnd(min, max) {
-    return Math.floor(Math.random() * (max - min)) + min;
+	return Math.floor(Math.random() * (max - min)) + min;
 }
 
 function trackOnNotesBetween(track, p1, p2, potentialOffset) {
-    filterednotes = _notes.filter(n => n._time >= p1 && n._time <= p2);
-    filterednotes.forEach(object => {
-        object._customData._track = track;
-        if (typeof potentialOffset !== "undefined") {
-            object._customData._noteJumpStartBeatOffset = potentialOffset;
-        }
-    });
-    return filterednotes;
+	filterednotes = _notes.filter(n => n._time >= p1 && n._time <= p2);
+	filterednotes.forEach(object => {
+		object._customData._track = track;
+		if (typeof potentialOffset !== "undefined") {
+			object._customData._noteJumpStartBeatOffset = potentialOffset;
+		}
+	});
+	return filterednotes;
 }
 // okay stop ignoring this shit now, all the cool stuff is below :)
 //#region Intro random
@@ -1130,116 +1175,132 @@ function trackOnNotesBetween(track, p1, p2, potentialOffset) {
 
 
 
-var blurSamples = 4
-var blurSpacing = 8
+var blurSamples = 2
+var blurSpacing = 12
 
 filterednotes = _notes.filter(n => n._time >= 0 && n._time < 134);
 filterednotes.forEach(note => {
-  if (note._customData._fake != true) {
-    note._customData._disableNoteGravity = true;
-	note._customData._disableSpawnEffect = true;
-    note._customData._noteJumpMovementSpeed = 12;
-    note._customData._noteJumpStartBeatOffset = 4;
-	note._customData._animation = {}
-	note._customData._animation._position = [[0,0,-20,0], [0,0,0,0.5, "easeOutSine"]]
-    note._customData._animation._rotation = [[getRndInteger(-5,5), getRndInteger(-5,5), getRndInteger(-180,180), 0], [0, 0, 0, 0.4375, "easeOutQuad"]];
-    note._customData._animation._localRotation = [[getRndInteger(-15,15), getRndInteger(-15,15), getRndInteger(-15,15), 0], [0, 0, 0, 0.4375, "easeInOutCubic"]];
-	note._customData._animation._dissolve = [[0,0],[1,0.375, "easeOutQuad"]];
-	note._customData._animation._scale = [[0.2,0.2,0.2,0], [1,1,1,0.375, "easeOutCubic"]];
-  for (let index = 0; index < blurSamples/2; index++) {
-    let n1 = JSON.parse(JSON.stringify(note));
-    n1._time += (blurSpacing*0.01337)*(index*2)
-	n1._customData._noteJumpStartBeatOffset = 8;
-    n1._customData._animation._dissolveArrow = [[0,0.2499],[0.3,0.25],[0,0.475 - (index*0.005), "easeInCubic"]];
-    n1._customData._animation._dissolve = [[0,0.2499],[0.15,0.25],[0,0.4375 - (index*0.005), "easeInOutQuad"]];
-    n1._customData._animation._scale = [[0.25,0.25,0.25,0.25],[1.5,1.5,0.9,0.4375 - (index*0.005), "easeInCubic"]];
-    n1._customData._fake = true;
-    n1._customData._interactable = false;
-    n1._customData._disableNoteGravity = true;
-    _notes.push(n1);
-  }
-}
-}); 
+	if (note._customData._fake != true) {
+		note._customData._disableNoteGravity = true;
+		note._customData._disableSpawnEffect = true;
+		note._customData._noteJumpMovementSpeed = 12;
+		note._customData._noteJumpStartBeatOffset = 4;
+		note._customData._animation = {}
+		note._customData._animation._position = [[0, 0, -20, 0], [0, 0, 0, 0.5, "easeOutSine"]]
+		note._customData._animation._rotation = [[getRndInteger(-5, 5), getRndInteger(-5, 5), getRndInteger(-180, 180), 0], [0, 0, 0, 0.4375, "easeOutQuad"]];
+		note._customData._animation._localRotation = [[getRndInteger(-15, 15), getRndInteger(-15, 15), getRndInteger(-15, 15), 0], [0, 0, 0, 0.4375, "easeInOutCubic"]];
+		note._customData._animation._dissolve = [[0, 0], [1, 0.375, "easeOutQuad"]];
+		note._customData._animation._scale = [[0.2, 0.2, 0.2, 0], [1, 1, 1, 0.375, "easeOutCubic"]];
+		for (let index = 1; index < blurSamples / 2; index++) {
+			let n1 = JSON.parse(JSON.stringify(note));
+			n1._time += (blurSpacing * 0.01337) * (index * 2)
+			n1._customData._noteJumpStartBeatOffset = 8;
+			n1._customData._animation._dissolveArrow = [[0, 0.2499], [0.3, 0.25], [0, 0.475 - (index * 0.005), "easeInCubic"]];
+			n1._customData._animation._dissolve = [[0, 0.2499], [0.15, 0.25], [0, 0.4375 - (index * 0.005), "easeInOutQuad"]];
+			n1._customData._animation._scale = [[0.25, 0.25, 4.2069, 0.25], [1.5, 1.5, 0.9, 0.4375 - (index * 0.005), "easeInCubic"]];
+			n1._customData._fake = true;
+			n1._customData._interactable = false;
+			n1._customData._disableNoteGravity = true;
+			_notes.push(n1);
+		}
+	}
+});
 
 
 filterednotes = _notes.filter(n => n._time >= 134 && n._time < 197);
 filterednotes.forEach(note => {
-  if (note._customData._fake != true) {
-    note._customData._disableNoteGravity = true;
-    note._customData._noteJumpMovementSpeed = 15;
-    note._customData._noteJumpStartBeatOffset = 4;
-	note._customData._animation = {}
-	note._customData._animation._position = [[0,0,-20,0], [0,0,0,0.5, "easeOutSine"]]
-    note._customData._animation._rotation = [[getRndInteger(-13,8), getRndInteger(-13,13), getRndInteger(-12,12), 0], [0, 0, 0, 0.475, "easeInOutQuad"]];
-    note._customData._animation._localRotation = [[getRndInteger(-15,15), getRndInteger(-15,15), getRndInteger(-15,15), 0], [getRndInteger(-1.5,1.5), getRndInteger(-1,1), getRndInteger(-1,1), 0.5, "easeInOutBack"]];
-	note._customData._animation._dissolve = [[0,0],[1,0.375, "easeOutQuad"]];
-	note._customData._animation._scale = [[0.2,0.2,0.2,0], [1,1,1,0.375, "easeOutCubic"]];
-	for (let index = 0; index < blurSamples*2; index++) {
-		let n1 = JSON.parse(JSON.stringify(note));
-		n1._time += (blurSpacing*0.01337)*(index*2)
-		n1._customData._animation._dissolveArrow = [[0,0.2499],[0.45,0.25],[0,0.475 - (index*0.005), "easeInQuad"]];
-		n1._customData._animation._dissolve = [[0,0.2499],[0.2,0.25],[0,0.475 - (index*0.005), "easeInOutQuad"]];
-		n1._customData._animation._scale = [[0.25,0.25,0.25,0.25],[2,2,0.9,0.5 - (index*0.005), "easeInCubic"]];
-    n1._customData._fake = true;
-    n1._customData._interactable = false;
-    n1._customData._disableNoteGravity = true;
-    n1._customData._disableSpawnEffect = true;
-    _notes.push(n1);
-  }
-}
-}); 
+	if (note._customData._fake != true) {
+		note._customData._disableNoteGravity = true;
+		note._customData._noteJumpMovementSpeed = 15;
+		note._customData._noteJumpStartBeatOffset = 4;
+		note._customData._animation = {}
+		note._customData._animation._position = [[0, 0, -20, 0], [0, 0, 0, 0.5, "easeOutSine"]]
+		note._customData._animation._rotation = [[getRndInteger(-13, 8), getRndInteger(-13, 13), getRndInteger(-12, 12), 0], [0, 0, 0, 0.475, "easeInOutQuad"]];
+		note._customData._animation._localRotation = [[getRndInteger(-15, 15), getRndInteger(-15, 15), getRndInteger(-15, 15), 0], [getRndInteger(-1.5, 1.5), getRndInteger(-1, 1), getRndInteger(-1, 1), 0.5, "easeInOutBack"]];
+		note._customData._animation._dissolve = [[0, 0], [1, 0.375, "easeOutQuad"]];
+		note._customData._animation._scale = [[0.2, 0.2, 0.2, 0], [1, 1, 1, 0.375, "easeOutCubic"]];
+		for (let index = 1; index < blurSamples * 2; index++) {
+			let n1 = JSON.parse(JSON.stringify(note));
+			n1._time += (blurSpacing * 0.01337) * (index * 2)
+			n1._customData._animation._dissolveArrow = [[0, 0.2499], [0.45, 0.25], [0, 0.475 - (index * 0.005), "easeInQuad"]];
+			n1._customData._animation._dissolve = [[0, 0.2499], [0.2, 0.25], [0, 0.475 - (index * 0.005), "easeInOutQuad"]];
+			n1._customData._animation._scale = [[0.25, 0.25, 4.2069, 0.25], [2, 2, 0.9, 0.5 - (index * 0.005), "easeInCubic"]];
+			n1._customData._fake = true;
+			n1._customData._interactable = false;
+			n1._customData._disableNoteGravity = true;
+			n1._customData._disableSpawnEffect = true;
+			_notes.push(n1);
+		}
+	}
+});
 
 filterednotes = _notes.filter(n => n._time >= 197 && n._time < 258);
 filterednotes.forEach(note => {
-  if (note._customData._fake != true) {
-    note._customData._disableNoteGravity = true;
-    note._customData._noteJumpMovementSpeed = 16;
-    note._customData._noteJumpStartBeatOffset = 4;
-	note._customData._animation = {}
-    note._customData._animation._rotation = [[getRndInteger(-5,15), getRndInteger(-15,15), getRndInteger(-15,15), 0], [0, 0, 0, 0.475, "easeInOutCubic"]];
-    note._customData._animation._localRotation = [[getRndInteger(-150,150), getRndInteger(-150,150), getRndInteger(-150,150), 0], [getRndInteger(-1,1), getRndInteger(-1,1), getRndInteger(-1,1), 0.475, "easeInOutBack"]];
-	note._customData._animation._dissolve = [[0,0],[1,0.375, "easeOutQuad"]];
-	note._customData._animation._scale = [[0.2,0.2,0.2,0], [1,1,1,0.375, "easeOutCubic"]];
-  for (let index = 0; index < blurSamples*2; index++) {
-    let n1 = JSON.parse(JSON.stringify(note));
-    n1._time += (blurSpacing*0.01337)*(index*2)
-    n1._customData._animation._dissolveArrow = [[0,0.2499],[0.45,0.25],[0,0.475 - (index*0.005), "easeInQuad"]];
-    n1._customData._animation._dissolve = [[0,0.2499],[0.2,0.25],[0,0.475 - (index*0.005), "easeInOutQuad"]];
-    n1._customData._animation._scale = [[0.25,0.25,0.25,0.25],[2,2,0.9,0.5 - (index*0.005), "easeInCubic"]];
-    n1._customData._fake = true;
-    n1._customData._interactable = false;
-    n1._customData._disableNoteGravity = true;
-    n1._customData._disableSpawnEffect = true;
-    _notes.push(n1);
-  }
-}
-}); 
+	if (note._customData._fake != true) {
+		note._customData._disableNoteGravity = true;
+		note._customData._noteJumpMovementSpeed = 16;
+		note._customData._noteJumpStartBeatOffset = 4;
+		note._customData._animation = {}
+		//note._customData._animation._position = [[0,0,35,0], [0,0,0,0.4375, "easeInOutBack"]];
+		note._customData._animation._rotation = [[getRndInteger(-5, 15), getRndInteger(-15, 15), getRndInteger(-15, 15), 0], [0, 0, 0, 0.475, "easeInOutCubic"]];
+		note._customData._animation._localRotation = [[getRndInteger(-150, 150), getRndInteger(-150, 150), getRndInteger(-150, 150), 0], [getRndInteger(-1, 1), getRndInteger(-1, 1), getRndInteger(-1, 1), 0.475, "easeInOutBack"]];
+		note._customData._animation._dissolve = [[0, 0], [1, 0.375, "easeOutQuad"]];
+		note._customData._animation._dissolveArrow = [[rnd(1.5,4.5)/10,0.25],[1,0.475,"easeInOutCubic"]];
+		note._customData._animation._scale = [[0.2, 0.2, 0.2, 0], [1, 1, 1, 0.375, "easeOutCubic"]];
+		for (let index = 1; index <= 2; index++) {
+			let n1 = JSON.parse(JSON.stringify(note));
+			n1._time -= index*0.0125;
+			n1._customData._animation._rotation = [[getRndInteger(-5, 15), getRndInteger(-15, 15), getRndInteger(-15, 15), 0], [0, 0, 0, 0.475, "easeInOutCubic"]];
+			n1._customData._animation._localRotation = [[getRndInteger(-150, 150), getRndInteger(-150, 150), getRndInteger(-150, 150), 0], [getRndInteger(-1, 1), getRndInteger(-1, 1), getRndInteger(-1, 1), 0.475, "easeInOutBack"]];
+			//n1._customData._animation._position = [[rnd(-10,10),rnd(-6.9,13.37),35,0], [0,0,0,0.475, "easeInOutBack"]];
+			n1._customData._animation._dissolveArrow = [[rnd(1.5,4.5)/10,0],[0,0.4875,"easeOutCubic"]];
+			n1._customData._animation._dissolve = [[0,0],[rnd(5,9)/10,0.25,"easeInOutCubic"],[0,0.4375,"easeOutCubic"]];
+			n1._customData._fake = true;
+			n1._customData._interactable = false;
+			  _notes.push(n1);
+		  }
+		for (let index = 1; index < blurSamples * 2; index++) {
+			let n2 = JSON.parse(JSON.stringify(note));
+			n2._time += (blurSpacing * 0.01337) * (index * 2)
+			n2._customData._animation._dissolveArrow = [[0, 0.2499], [0.45, 0.25], [0, 0.475 - (index * 0.005), "easeInQuad"]];
+			n2._customData._animation._dissolve = [[0, 0.2499], [0.2, 0.25], [0, 0.4375 - (index * 0.005), "easeOutCubic"]];
+			n2._customData._animation._scale = [[0.25, 0.25, 4.2069, 0.25], [2, 2, 2, 0.5 - (index * 0.005), "easeInCubic"]];
+			n2._customData._fake = true;
+			n2._customData._interactable = false;
+			n2._customData._disableNoteGravity = true;
+			n2._customData._disableSpawnEffect = true;
+			_notes.push(n2);
+		}
+	}
+});
+
+
 
 filterednotes = _notes.filter(n => n._time >= 258 && n._time <= 262);
 filterednotes.forEach(note => {
-  if (note._customData._fake != true) {
-    note._customData._disableNoteGravity = true;
-    note._customData._noteJumpMovementSpeed = 14;
-    note._customData._noteJumpStartBeatOffset = 8;
-	note._customData._animation = {}
-    note._customData._animation._rotation = [[getRndInteger(-15,15), getRndInteger(-15,15), getRndInteger(-15,15), 0], [0, 0, 0, 0.475, "easeInOutCubic"]];
-    note._customData._animation._localRotation = [[getRndInteger(-150,150), getRndInteger(-150,150), getRndInteger(-150,150), 0], [getRndInteger(-1,1), getRndInteger(-1,1), getRndInteger(-1,1), 0.475, "easeInOutBack"]];
-	note._customData._animation._dissolve = [[0,0],[1,0.375, "easeOutQuad"]];
-	note._customData._animation._scale = [[0.2,0.2,0.2,0], [1,1,1,0.375, "easeOutCubic"]];
-  for (let index = 0; index < blurSamples*5; index++) {
-    let n1 = JSON.parse(JSON.stringify(note));
-    n1._time += (blurSpacing*0.0169)*(index*2)
-    n1._customData._animation._dissolveArrow = [[0,0.2499],[0.45,0.25],[0,0.475 - (index*0.005), "easeInQuad"]];
-    n1._customData._animation._dissolve = [[0,0.2499],[0.2,0.25],[0,0.475 - (index*0.005), "easeInOutQuad"]];
-    n1._customData._animation._scale = [[0.25,0.25,0.25,0.25],[3,3,0.9,0.5 - (index*0.005), "easeInCubic"]];
-    n1._customData._fake = true;
-    n1._customData._interactable = false;
-    n1._customData._disableNoteGravity = true;
-    n1._customData._disableSpawnEffect = true;
-    _notes.push(n1);
-  }
-}
-}); 
+	if (note._customData._fake != true) {
+		note._customData._disableNoteGravity = true;
+		note._customData._noteJumpMovementSpeed = 14;
+		note._customData._noteJumpStartBeatOffset = 8;
+		note._customData._animation = {}
+		note._customData._animation._rotation = [[getRndInteger(-15, 15), getRndInteger(-15, 15), getRndInteger(-15, 15), 0], [0, 0, 0, 0.475, "easeInOutCubic"]];
+		note._customData._animation._localRotation = [[getRndInteger(-150, 150), getRndInteger(-150, 150), getRndInteger(-150, 150), 0], [getRndInteger(-1, 1), getRndInteger(-1, 1), getRndInteger(-1, 1), 0.475, "easeInOutBack"]];
+		note._customData._animation._dissolve = [[0, 0], [1, 0.375, "easeOutQuad"]];
+		note._customData._animation._scale = [[0.2, 0.2, 0.2, 0], [1, 1, 1, 0.375, "easeOutCubic"]];
+		for (let index = 1; index < blurSamples * 6; index++) {
+			let n1 = JSON.parse(JSON.stringify(note));
+			n1._time += (blurSpacing * 0.0275) * (index * 2)
+			n1._customData._animation._dissolveArrow = [[0, 0.2499], [0.45, 0.25], [0, 0.475 - (index * 0.005), "easeInQuad"]];
+			n1._customData._animation._dissolve = [[0, 0.2499], [0.2, 0.25], [0, 0.475 - (index * 0.005), "easeInOutQuad"]];
+			n1._customData._animation._scale = [[0.25, 0.25, 4.2069, 0.25], [22, 22, 2.2, 0.5 - (index * 0.005), "easeInExpo"]];
+			n1._customData._fake = true;
+			n1._customData._interactable = false;
+			n1._customData._disableNoteGravity = true;
+			n1._customData._disableSpawnEffect = true;
+			_notes.push(n1);
+		}
+	}
+});
 
 
 //#endregion
@@ -1253,372 +1314,380 @@ filterednotes.forEach(note => {
 filterednotes = _notes.filter(n => n._time > 262 && n._time <= 325);
 filterednotes.forEach(note => {
 	if (note._customData._fake != true) {
-    note._customData._track = "waterNotes";
-    note._customData._noteJumpMovementSpeed = 10;
-    note._customData._noteJumpStartBeatOffset = 18;
-    note._customData._disableNoteGravity = true;
-    note._customData._disableSpawnEffect = true;
-    note._customData._animation = {}
-    note._customData._animation._rotation = [[0,rnd(-4,4),0,0.375], [0,0,0,0.5, "easeInOutBack"]]
-    note._customData._animation._localRotation = [[rnd(-45,45),rnd(-45,45),rnd(-45,45),0],[rnd(-45,45),rnd(-45,45),rnd(-45,45),0.375, "easeInOutBack"], [0,0,0,0.5, "easeInOutBack"]]
-    if (note._lineLayer == 0) {
-        note._customData._animation._position = [[rnd(-1.125,1.125),rnd(-0.65,-0.25),0,0.375], [0,0,0,0.5, "easeInOutBack"]]
-        }
-    if (note._lineLayer == 1) {
-        note._customData._animation._position = [[rnd(-1.125,1.125),rnd(-1.35,-0.9),0,0.375], [0,0,0,0.5, "easeInOutBack"]]
-    }
-    if (note._lineLayer == 2) {
-        note._customData._animation._position = [[rnd(-1.125,1.125),rnd(-2.25,-1.75),0,0.375], [0,0,0,0.5, "easeInOutBack"]]
-        }
-    for (let index = 0; index < 1; index++) {
-    let n1 = JSON.parse(JSON.stringify(note));
-        n1._time -= 0.0125
-        n1._customData._track = "waterNotesF";
-        n1._customData._noteJumpMovementSpeed = 4;
-        n1._customData._noteJumpStartBeatOffset = 8;
-        n1._customData._fake = true;
-        n1._customData._interactable = false;
-        n1._customData._disableSpawnEffect = true;
-        n1._customData._disableNoteGravity = true;
-        n1._customData._color = [2,2,2,2];
-        n1._customData._animation = {}
-        if (n1._lineLayer != 0) {
-            n1._lineLayer = 0;
-            n1._customData._animation._dissolve = [[0.25,0.125], [0,0.375,"easeInOutCubic"]];
-            n1._customData._animation._position = [[0,-1,20,0], [0,-2.5,20,0.5, "easeOutQuad"]];
-        }
-        n1._customData._animation._position = [[0,-0.69,20,0.25], [0,-1.5,15,0.5, "easeOutSine"]];
-        n1._customData._animation._dissolveArrow = [[0,0]];
-        n1._customData._animation._dissolve = [[0,0.25],[0.420,0.375, "easeInOutQuad"], [0,0.675,"easeInOutBounce"]];
-        n1._customData._animation._scale = [[1.2,0.01,3,0.125], [10,0.01,50,0.6, "easeInExpo"]];
-        _notes.push(n1);
+		note._customData._track = "waterNotes";
+		note._customData._noteJumpMovementSpeed = 10;
+		note._customData._noteJumpStartBeatOffset = 18;
+		note._customData._disableNoteGravity = true;
+		note._customData._disableSpawnEffect = true;
+		note._customData._animation = {}
+		note._customData._animation._rotation = [[0, rnd(-4, 4), 0, 0.375], [0, 0, 0, 0.5, "easeInOutBack"]]
+		note._customData._animation._localRotation = [[rnd(-45, 45), rnd(-45, 45), rnd(-45, 45), 0], [rnd(-45, 45), rnd(-45, 45), rnd(-45, 45), 0.375, "easeInOutBack"], [0, 0, 0, 0.5, "easeInOutBack"]]
+		if (note._lineLayer == 0) {
+			note._customData._animation._position = [[rnd(-1.125, 1.125), rnd(-0.65, -0.25), 0, 0.375], [0, 0, 0, 0.5, "easeInOutBack"]]
+		}
+		if (note._lineLayer == 1) {
+			note._customData._animation._position = [[rnd(-1.125, 1.125), rnd(-1.35, -0.9), 0, 0.375], [0, 0, 0, 0.5, "easeInOutBack"]]
+		}
+		if (note._lineLayer == 2) {
+			note._customData._animation._position = [[rnd(-1.125, 1.125), rnd(-2.25, -1.75), 0, 0.375], [0, 0, 0, 0.5, "easeInOutBack"]]
+		}
+		for (let index = 0; index < 1; index++) {
+			let n1 = JSON.parse(JSON.stringify(note));
+			n1._time -= 0.0125
+			n1._customData._track = "waterNotesF";
+			n1._customData._noteJumpMovementSpeed = 4;
+			n1._customData._noteJumpStartBeatOffset = 8;
+			n1._customData._fake = true;
+			n1._customData._interactable = false;
+			n1._customData._disableSpawnEffect = true;
+			n1._customData._disableNoteGravity = true;
+			n1._customData._color = [2, 2, 2, 2];
+			n1._customData._animation = {}
+			if (n1._lineLayer != 0) {
+				n1._lineLayer = 0;
+				n1._customData._animation._dissolve = [[0.25, 0.125], [0, 0.375, "easeInOutCubic"]];
+				n1._customData._animation._position = [[0, -1, 22, 0], [0, -2.5, 20, 0.5, "easeOutQuad"]];
+			}
+			n1._customData._animation._position = [[0, -0.69, 22, 0.25], [0, -1.5, 15, 0.5, "easeOutSine"]];
+			n1._customData._animation._dissolveArrow = [[0, 0]];
+			n1._customData._animation._dissolve = [[0, 0.25], [0.420, 0.375, "easeInOutQuad"], [0, 0.675, "easeInOutBounce"]];
+			n1._customData._animation._scale = [[1.2, 0.01, 3, 0.125], [10, 0.01, 50, 0.6, "easeInExpo"]];
+			_notes.push(n1);
 
-    }
-}
+		}
+	}
 });
 
 // slider section 1
-filterednotes = _notes.filter(n => n._time > 325 && n._time <= 400);
+filterednotes = _notes.filter(n => n._time > 325 && n._time <= 380);
 filterednotes.forEach(note => {
-    note._customData._track = "waterNotes";
-    note._customData._noteJumpMovementSpeed = 12;
-    note._customData._noteJumpStartBeatOffset = 16;
-    note._customData._disableNoteGravity = true;
-    note._customData._disableSpawnEffect = true;
-    note._customData._animation = {}
-    note._customData._animation._dissolve = [[rnd(0.35,0.69),0.125], [1,0.5, "easeInOutBack"]];
-    if (note._cutDirection == 8) {
-        note._customData._animation._dissolveArrow = [[0.25,0.125], [rnd(0.25,0.4),0.55,"easeInOutCubic"]]; 
-    }
-    if (note._cutDirection != 8) {
-        note._customData._animation._dissolveArrow = [[0.25,0.125], [rnd(0.69,0.9),0.55,"easeInOutCubic"]];
-    }
-    note._customData._animation._rotation = [[0,rnd(-3,3),0,0.25], [0,0,0,0.5, "easeInOutCubic"]]
-    note._customData._animation._localRotation = [[rnd(-45,45),rnd(-45,45),rnd(-45,45),0],[rnd(-45,45),rnd(-45,45),rnd(-45,45),0.2, "easeInOutBack"], [0,0,0,0.5, "easeInOutBack"]]
+	note._customData._track = "waterNotes";
+	note._customData._noteJumpMovementSpeed = 12;
+	note._customData._noteJumpStartBeatOffset = 24;
+	note._customData._disableNoteGravity = true;
+	note._customData._disableSpawnEffect = true;
+	note._customData._animation = {}
+	note._customData._animation._dissolve = [[rnd(0.35, 0.69), 0.125], [1, 0.5, "easeInOutBack"]];
+	if (note._cutDirection == 8) {
+		note._customData._animation._dissolveArrow = [[0.25, 0.125], [rnd(0.25, 0.4), 0.55, "easeInOutCubic"]];
+	}
+	if (note._cutDirection != 8) {
+		note._customData._animation._dissolveArrow = [[0.25, 0.125], [rnd(0.69, 0.9), 0.55, "easeInOutCubic"]];
+	}
+	note._customData._animation._rotation = [[0, rnd(-3, 3), 0, 0.25], [0, 0, 0, 0.5, "easeInOutCubic"]]
+	note._customData._animation._localRotation = [[rnd(-45, 45), rnd(-45, 45), rnd(-45, 45), 0], [rnd(-45, 45), rnd(-45, 45), rnd(-45, 45), 0.2, "easeInOutBack"], [0, 0, 0, 0.5, "easeInOutBack"]]
     if (note._lineLayer == 0) {
-        note._customData._animation._position = [[rnd(-15.5,15.5),rnd(-0.75,-0.45),0,0.25], [0,0,0,0.5, "easeInOutExpo"]]
-        }
+        note._customData._animation._position = [[rnd(-15.5, 5), rnd(-0.75, -0.45), -12.5, 0.375], [0, 0, 0, 0.4875, "easeInOutCubic"]]
+    }
     if (note._lineLayer == 1) {
-    note._customData._animation._position = [[rnd(-15.5,15.5),rnd(-1.45,-0.95),0,0.25], [0,0,0,0.5, "easeInOutExpo"]]
+        note._customData._animation._position = [[rnd(-15.5, 5), rnd(-1.45, -0.95), -12.5, 0.375], [0, 0, 0, 0.4875, "easeInOutCubic"]]
     }
     if (note._lineLayer == 2) {
-        note._customData._animation._position = [[rnd(-15.5,15.5),(-2.75,-2.45),0,0.25], [0,0,0,0.5, "easeInOutExpo"]]
-        }
-    
-    for (let index = 0; index < 1; index++) {
-    let n1 = JSON.parse(JSON.stringify(note));
-        n1._time -= 0.01337
-        n1._customData._track = "waterNotesF";
-        n1._customData._noteJumpMovementSpeed = 4;
-        n1._customData._noteJumpStartBeatOffset = 8;
-        n1._customData._fake = true;
-        n1._customData._interactable = false;
-        n1._customData._disableSpawnEffect = true;
-        n1._customData._disableNoteGravity = true;
-        n1._customData._color = [2,2,2,2];
-        n1._customData._animation = {}
-        if (n1._lineLayer == 0) {
-            n1._customData._animation._position = [[0,-0.69,20,0.25], [0,-2.25,10,0.675, "easeOutSine"]];
-            n1._customData._animation._dissolveArrow = [[0,0]];
-            n1._customData._animation._dissolve = [[0,0.25],[0.420,0.375, "easeInOutQuad"], [0,0.675,"easeInOutBounce"]];
-            n1._customData._animation._scale = [[1.2,0.01,3,0.125], [15,0.01,50,0.6, "easeInExpo"]];
-			_notes.push(n1);
-        }
-        if (n1._lineLayer != 0) {
-            n1._lineLayer = 0;
-            n1._customData._animation._position = [[0,-1,20,0.25], [0,-2,15,0.5, "easeOutQuad"]];
-            n1._customData._animation._dissolveArrow = [[0,0]];
-            n1._customData._animation._dissolve = [[0,0.25],[0.15,0.375, "easeInQuad"], [0,0.675,"easeInOutBounce"]];
-            n1._customData._animation._scale = [[20,0.01,6.9,0.125], [75,0.01,55,0.675, "easeInExpo"]];
-        }
-
+        note._customData._animation._position = [[rnd(-15.5, 5), (-2.75, -2.45), -12.5, 0.375], [0, 0, 0, 0.4875, "easeInOutCubic"]]
     }
+
+	for (let index = 0; index < 1; index++) {
+		let n1 = JSON.parse(JSON.stringify(note));
+		n1._time -= 0.01337
+		n1._customData._track = "waterNotesF";
+		n1._customData._noteJumpMovementSpeed = 4;
+		n1._customData._noteJumpStartBeatOffset = 8;
+		n1._customData._fake = true;
+		n1._customData._interactable = false;
+		n1._customData._disableSpawnEffect = true;
+		n1._customData._disableNoteGravity = true;
+		n1._customData._color = [2, 2, 2, 2];
+		n1._customData._animation = {}
+		if (n1._lineLayer == 0) {
+			n1._customData._animation._position = [[0, -0.69, 20, 0.25], [0, -2.25, 10, 0.675, "easeOutSine"]];
+			n1._customData._animation._dissolveArrow = [[0, 0]];
+			n1._customData._animation._dissolve = [[0, 0.25], [0.420, 0.4375, "easeInOutQuad"], [0, 0.675, "easeInOutBounce"]];
+			n1._customData._animation._scale = [[1.2, 0.01, 3, 0.125], [15, 0.01, 50, 0.6, "easeInExpo"]];
+			_notes.push(n1);
+		}
+		if (n1._lineLayer != 0) {
+			n1._lineLayer = 0;
+			n1._customData._animation._position = [[0, -1, 20, 0.25], [0, -2, 15, 0.5, "easeOutQuad"]];
+			n1._customData._animation._dissolveArrow = [[0, 0]];
+			n1._customData._animation._dissolve = [[0, 0.375], [0.15, 0.4375, "easeInQuad"], [0, 0.675, "easeInOutBounce"]];
+			n1._customData._animation._scale = [[20, 0.01, 6.9, 0.125], [75, 0.01, 55, 0.675, "easeInExpo"]];
+		}
+
+	}
 });
 // slider section 2
-filterednotes = _notes.filter(n => n._time > 400 && n._time <= 438);
+filterednotes = _notes.filter(n => n._time > 380 && n._time <= 438);
 filterednotes.forEach(note => {
-    note._customData._track = "waterNotes";
-    note._customData._noteJumpMovementSpeed = 12;
-    note._customData._noteJumpStartBeatOffset = 10;
-    note._customData._disableNoteGravity = true;
-    note._customData._disableSpawnEffect = true;
-    note._customData._animation = {}
-    note._customData._animation._dissolve = [[rnd(0.35,0.69),0.125], [1,0.5, "easeInOutBack"]];
-    if (note._cutDirection == 8) {
-        note._customData._animation._dissolveArrow = [[0.25,0.125], [rnd(0.25,0.4),0.55,"easeInOutCubic"]]; 
-    }
-    if (note._cutDirection != 8) {
-        note._customData._animation._dissolveArrow = [[0.25,0.125], [rnd(0.69,0.9),0.55,"easeInOutCubic"]];
-    }
-    note._customData._animation._rotation = [[0,rnd(-3,3),0,0.25], [0,0,0,0.5, "easeInOutExpo"]]
-    note._customData._animation._localRotation = [[rnd(-45,45),rnd(-45,45),rnd(-45,45),0],[rnd(-45,45),rnd(-45,45),rnd(-45,45),0.2, "easeInOutBack"], [0,0,0,0.5, "easeInOutBack"]]
-    if (note._lineLayer == 0) {
-        if (note._type == 0) {
-            note._customData._animation._position = [[rnd(-10,17.38),rnd(-0.75,-0.45),0,0.25], [0,0,0,0.5, "easeInOutExpo"]]
-        }
-        if (note._type == 1) {
-        note._customData._animation._position = [[rnd(-9,42.0),rnd(-0.75,-0.45),0,0.25], [0,0,0,0.5, "easeInOutExpo"]]
-        }
-    }
-    if (note._lineLayer == 1) {
-        if (note._type == 0) {
-            note._customData._animation._position = [[rnd(-9,13.37),rnd(-1.45,-0.95),0,0.25], [0,0,0,0.5, "easeInOutExpo"]]
-        }
-        if (note._type == 1) {
-            note._customData._animation._position = [[rnd(-10,42.0),rnd(-1.45,-0.95),0,0.25], [0,0,0,0.5, "easeInOutExpo"]]
-        }
-    }   
-    if (note._lineLayer == 2) {
-        if (note._type == 0) {
-            note._customData._animation._position = [[rnd(-8,6.9),(-2.75,-2.45),0,0.25], [0,0,0,0.5, "easeInOutExpo"]]
-        }
-        if (note._type == 1) {
-            note._customData._animation._position = [[rnd(-11,42.0),(-2.75,-2.45),0,0.25], [0,0,0,0.5, "easeInOutExpo"]]
-        }
-    }
-    for (let index = 0; index < 1; index++) {
-    let n1 = JSON.parse(JSON.stringify(note));
-        n1._time -= 0.01337
-        n1._customData._track = "waterNotesF";
-        n1._customData._noteJumpMovementSpeed = 4;
-        n1._customData._noteJumpStartBeatOffset = 8;
-        n1._customData._fake = true;
-        n1._customData._interactable = false;
-        n1._customData._disableSpawnEffect = true;
-        n1._customData._disableNoteGravity = true;
-        n1._customData._color = [2,2,2,2];
-        n1._customData._animation = {}
-        if (n1._lineLayer == 0) {
-            n1._customData._animation._position = [[0,-0.69,20,0.25], [0,-2.25,10,0.675, "easeOutSine"]];
-            n1._customData._animation._dissolveArrow = [[0,0]];
-            n1._customData._animation._dissolve = [[0,0.25],[0.420,0.375, "easeInOutQuad"], [0,0.675,"easeInOutBounce"]];
-            n1._customData._animation._scale = [[1.2,0.01,3,0.125], [15,0.01,50,0.6, "easeInExpo"]];
+	note._customData._track = "waterNotes";
+	note._customData._noteJumpMovementSpeed = 12;
+	note._customData._noteJumpStartBeatOffset = 24;
+	note._customData._disableNoteGravity = true;
+	note._customData._disableSpawnEffect = true;
+	note._customData._animation = {}
+	note._customData._animation._dissolve = [[rnd(0.35, 0.69), 0.125], [1, 0.5, "easeInOutBack"]];
+	if (note._cutDirection == 8) {
+		note._customData._animation._dissolveArrow = [[0.25, 0.125], [rnd(0.25, 0.4), 0.55, "easeInOutCubic"]];
+	}
+	if (note._cutDirection != 8) {
+		note._customData._animation._dissolveArrow = [[0.25, 0.125], [rnd(0.69, 0.9), 0.55, "easeInOutCubic"]];
+	}
+	note._customData._animation._rotation = [[0, rnd(-3, 3), 0, 0.25], [0, 0, 0, 0.5, "easeInOutExpo"]]
+	note._customData._animation._localRotation = [[rnd(-45, 45), rnd(-45, 45), rnd(-45, 45), 0], [rnd(-45, 45), rnd(-45, 45), rnd(-45, 45), 0.2, "easeInOutBack"], [0, 0, 0, 0.5, "easeInOutBack"]]
+	if (note._lineLayer == 0) {
+		if (note._type == 0) {
+			note._customData._animation._position = [[rnd(-10, 17.38), rnd(-0.75, -0.45), -15, 0.375], [0, 0, 0, 0.4875, "easeInOutCubic"]]
+		}
+		if (note._type == 1) {
+			note._customData._animation._position = [[rnd(-9, 42.0), rnd(-0.75, -0.45), -15, 0.375], [0, 0, 0, 0.4875, "easeInOutCubic"]]
+		}
+	}
+	if (note._lineLayer == 1) {
+		if (note._type == 0) {
+			note._customData._animation._position = [[rnd(-9, 13.37), rnd(-1.45, -0.95), -15, 0.375], [0, 0, 0, 0.4875, "easeInOutCubic"]]
+		}
+		if (note._type == 1) {
+			note._customData._animation._position = [[rnd(-10, 42.0), rnd(-1.45, -0.95), -15, 0.375], [0, 0, 0, 0.4875, "easeInOutCubic"]]
+		}
+	}
+	if (note._lineLayer == 2) {
+		if (note._type == 0) {
+			note._customData._animation._position = [[rnd(-8, 6.9), (-2.75, -2.45), -15, 0.375], [0, 0, 0, 0.4875, "easeInOutCubic"]]
+		}
+		if (note._type == 1) {
+			note._customData._animation._position = [[rnd(-11, 42.0), (-2.75, -2.45), -15, 0.375], [0, 0, 0, 0.4875, "easeInOutCubic"]]
+		}
+	}
+	for (let index = 0; index < 1; index++) {
+		let n1 = JSON.parse(JSON.stringify(note));
+		n1._time -= 0.01337
+		n1._customData._track = "waterNotesF";
+		n1._customData._noteJumpMovementSpeed = 4;
+		n1._customData._noteJumpStartBeatOffset = 8;
+		n1._customData._fake = true;
+		n1._customData._interactable = false;
+		n1._customData._disableSpawnEffect = true;
+		n1._customData._disableNoteGravity = true;
+		n1._customData._color = [2, 2, 2, 2];
+		n1._customData._animation = {}
+		if (n1._lineLayer == 0) {
+			n1._customData._animation._position = [[0, -0.69, 20, 0.25], [0, -2.25, 10, 0.675, "easeOutSine"]];
+			n1._customData._animation._dissolveArrow = [[0, 0]];
+			n1._customData._animation._dissolve = [[0, 0.375], [0.420, 0.4375, "easeInOutQuad"], [0, 0.675, "easeInOutBounce"]];
+			n1._customData._animation._scale = [[1.2, 0.01, 3, 0.125], [15, 0.01, 50, 0.6, "easeInExpo"]];
 			_notes.push(n1);
-        }
-        if (n1._lineLayer != 0) {
-            n1._lineLayer = 0;
-            n1._customData._animation._position = [[0,-1,20,0.25], [0,-2,15,0.5, "easeOutQuad"]];
-            n1._customData._animation._dissolveArrow = [[0,0]];
-            n1._customData._animation._dissolve = [[0,0.25],[0.15,0.375, "easeInQuad"], [0,0.675,"easeInOutBounce"]];
-            n1._customData._animation._scale = [[20,0.01,6.9,0.125], [75,0.01,55,0.675, "easeInExpo"]];;
-        }
+		}
+		if (n1._lineLayer != 0) {
+			n1._lineLayer = 0;
+			n1._customData._animation._position = [[0, -1, 20, 0.25], [0, -2, 15, 0.5, "easeOutQuad"]];
+			n1._customData._animation._dissolveArrow = [[0, 0]];
+			n1._customData._animation._dissolve = [[0, 0.375], [0.15, 0.4375, "easeInQuad"], [0, 0.675, "easeInOutBounce"]];
+			n1._customData._animation._scale = [[20, 0.01, 6.9, 0.125], [75, 0.01, 55, 0.675, "easeInExpo"]];;
+		}
 
-    }
+	}
 });
 // slider section 3
 filterednotes = _notes.filter(n => n._time > 438 && n._time <= 454);
 filterednotes.forEach(note => {
-    note._customData._track = "waterNotes";
-    note._customData._noteJumpMovementSpeed = 12;
-    note._customData._noteJumpStartBeatOffset = 8;
-    note._customData._disableNoteGravity = true;
-    note._customData._disableSpawnEffect = true;
-    note._customData._animation = {}
-    note._customData._animation._dissolve = [[rnd(0.35,0.69),0.125], [1,0.5, "easeInOutBack"]];
-    if (note._cutDirection == 8) {
-        note._customData._animation._dissolveArrow = [[0.25,0.125], [rnd(0.25,0.4),0.55,"easeInOutCubic"]]; 
-    }
-    if (note._cutDirection != 8) {
-        note._customData._animation._dissolveArrow = [[0.25,0.125], [rnd(0.69,0.9),0.55,"easeInOutCubic"]];
-    }
-    note._customData._animation._rotation = [[0,rnd(-3,3),0,0.25], [0,0,0,0.5, "easeInOutExpo"]]
-    note._customData._animation._localRotation = [[rnd(-45,45),rnd(-45,45),rnd(-45,45),0],[rnd(-45,45),rnd(-45,45),rnd(-45,45),0.2, "easeInOutBack"], [0,0,0,0.5, "easeInOutBack"]]
-    if (note._lineLayer == 0) {
-        note._customData._animation._position = [[rnd(-17.38,17.38),rnd(-0.75,-0.45),0,0.25], [0,0,0,0.5, "easeInOutExpo"]]
-        }
-    if (note._lineLayer == 1) {
-    note._customData._animation._position = [[rnd(-17.38,17.38),rnd(-1.45,-0.95),0,0.25], [0,0,0,0.5, "easeInOutExpo"]]
-    }
-    if (note._lineLayer == 2) {
-        note._customData._animation._position = [[rnd(-17.38,17.38),(-2.75,-2.45),0,0.25], [0,0,0,0.5, "easeInOutExpo"]]
-        }
-    
-    for (let index = 0; index < 1; index++) {
-    let n1 = JSON.parse(JSON.stringify(note));
-        n1._time -= 0.01337
-        n1._customData._track = "waterNotesF";
-        n1._customData._noteJumpMovementSpeed = 4;
-        n1._customData._noteJumpStartBeatOffset = 8;
-        n1._customData._fake = true;
-        n1._customData._interactable = false;
-        n1._customData._disableSpawnEffect = true;
-        n1._customData._disableNoteGravity = true;
-        n1._customData._color = [2,2,2,2];
-        n1._customData._animation = {}
-        if (n1._lineLayer == 0) {
-            n1._customData._animation._position = [[0,-0.69,20,0.25], [0,-2.25,10,0.675, "easeOutSine"]];
-            n1._customData._animation._dissolveArrow = [[0,0]];
-            n1._customData._animation._dissolve = [[0,0.25],[0.420,0.375, "easeInOutQuad"], [0,0.675,"easeInOutBounce"]];
-            n1._customData._animation._scale = [[1.2,0.01,3,0.125], [15,0.01,50,0.6, "easeInExpo"]];
-			_notes.push(n1);
-        }
-        if (n1._lineLayer != 0) {
-            n1._lineLayer = 0;
-            n1._customData._animation._position = [[0,-1,20,0.25], [0,-2,15,0.5, "easeOutQuad"]];
-            n1._customData._animation._dissolveArrow = [[0,0]];
-            n1._customData._animation._dissolve = [[0,0.25],[0.15,0.375, "easeInQuad"], [0,0.675,"easeInOutBounce"]];
-            n1._customData._animation._scale = [[20,0.01,6.9,0.125], [75,0.01,55,0.675, "easeInExpo"]];
-        }
+	note._customData._track = "waterNotes";
+	note._customData._noteJumpMovementSpeed = 12;
+	note._customData._noteJumpStartBeatOffset = 18;
+	note._customData._disableNoteGravity = true;
+	note._customData._disableSpawnEffect = true;
+	note._customData._animation = {}
+	note._customData._animation._dissolve = [[rnd(0.35, 0.69), 0.125], [1, 0.5, "easeInOutBack"]];
+	if (note._cutDirection == 8) {
+		note._customData._animation._dissolveArrow = [[0.25, 0.125], [rnd(0.25, 0.4), 0.55, "easeInOutCubic"]];
+	}
+	if (note._cutDirection != 8) {
+		note._customData._animation._dissolveArrow = [[0.25, 0.125], [rnd(0.69, 0.9), 0.55, "easeInOutCubic"]];
+	}
+	note._customData._animation._rotation = [[0, rnd(-3, 3), 0, 0.25], [0, 0, 0, 0.5, "easeInOutExpo"]]
+	note._customData._animation._localRotation = [[rnd(-45, 45), rnd(-45, 45), rnd(-45, 45), 0], [rnd(-45, 45), rnd(-45, 45), rnd(-45, 45), 0.2, "easeInOutBack"], [0, 0, 0, 0.5, "easeInOutBack"]]
+	if (note._lineLayer == 0) {
+		note._customData._animation._position = [[rnd(-17.38, 17.38), rnd(-0.75, -0.45), -15, 0.375], [0, 0, 0, 0.4875, "easeInOutCubic"]]
+	}
+	if (note._lineLayer == 1) {
+		note._customData._animation._position = [[rnd(-17.38, 17.38), rnd(-1.45, -0.95), -15, 0.375], [0, 0, 0, 0.4875, "easeInOutCubic"]]
+	}
+	if (note._lineLayer == 2) {
+		note._customData._animation._position = [[rnd(-17.38, 17.38), (-2.75, -2.45), -15, 0.375], [0, 0, 0, 0.4875, "easeInOutCubic"]]
+	}
 
-    }
+	for (let index = 0; index < 1; index++) {
+		let n1 = JSON.parse(JSON.stringify(note));
+		n1._time -= 0.01337
+		n1._customData._track = "waterNotesF";
+		n1._customData._noteJumpMovementSpeed = 4;
+		n1._customData._noteJumpStartBeatOffset = 8;
+		n1._customData._fake = true;
+		n1._customData._interactable = false;
+		n1._customData._disableSpawnEffect = true;
+		n1._customData._disableNoteGravity = true;
+		n1._customData._color = [2, 2, 2, 2];
+		n1._customData._animation = {}
+		if (n1._lineLayer == 0) {
+			n1._customData._animation._position = [[0, -0.69, 20, 0.25], [0, -2.25, 10, 0.675, "easeOutSine"]];
+			n1._customData._animation._dissolveArrow = [[0, 0]];
+			n1._customData._animation._dissolve = [[0, 0.375], [0.420, 0.4375, "easeInOutQuad"], [0, 0.675, "easeInOutBounce"]];
+			n1._customData._animation._scale = [[1.2, 0.01, 3, 0.125], [15, 0.01, 50, 0.6, "easeInExpo"]];
+			_notes.push(n1);
+		}
+		if (n1._lineLayer != 0) {
+			n1._lineLayer = 0;
+			n1._customData._animation._position = [[0, -1, 20, 0.25], [0, -2, 15, 0.5, "easeOutQuad"]];
+			n1._customData._animation._dissolveArrow = [[0, 0]];
+			n1._customData._animation._dissolve = [[0, 0.375], [0.15, 0.4375, "easeInQuad"], [0, 0.675, "easeInOutBounce"]];
+			n1._customData._animation._scale = [[20, 0.01, 6.9, 0.125], [75, 0.01, 55, 0.675, "easeInExpo"]];
+		}
+
+	}
 });
 
 _customEvents.push({
-    _time: 454,
-    _type: "AnimateTrack",
-    _data: {
-      _track: "waterNotesF",
-      _duration: 4,
-      _dissolve: [[0.25, 0], [0, 1, "easeOutExpo"]],
-      _dissolveArrow: [[0, 0]]
-    }
-  }); 
+	_time: 454,
+	_type: "AnimateTrack",
+	_data: {
+		_track: "waterNotesF",
+		_duration: 4,
+		_dissolve: [[0.25, 0], [0, 1, "easeOutExpo"]],
+		_dissolveArrow: [[0, 0]]
+	}
+});
 
 
 
 //#endregion
 
 //#region Mountain Section 454-517
-  filterednotes = _notes.filter(n => n._time > 454 && n._time <= 517);
-  filterednotes.forEach(note => {
-    if (note._cutDirection != 8) {note._customData._track = "mtnNotes";}
-    if (note._cutDirection == 8) {note._customData._track = "mtnNotesD";}
-    note._customData._noteJumpMovementSpeed = 12;
-    note._customData._noteJumpStartBeatOffset = 20;
-    note._customData._disableSpawnEffect = true;
-    note._customData._disableNoteGravity = true;
-    note._customData._animation = {}
-	note._customData._animation._dissolve = [[0,0], [1,0.125,"easeOutSine"]]
-    note._customData._animation._position = [[0,0,-95,0], [0,0,0,0.5, "easeInOutQuad"]];
-    note._customData._animation._rotation = [[rnd(-90,50), rnd(-69,90), rnd(-80,80), 0],[rnd(-3,3),rnd(-10,10),rnd(-2,2),0.5,"easeOutBack"]]; 
-    note._customData._animation._localRotation = [[rnd(-90,90), rnd(-90,90), rnd(-90,90), 0],[rnd(-180,180), rnd(-180,180), rnd(-180,180), 0.25, "easeOutBack"],[0,0,0,0.5,"easeOutBack"]]; 
-    for (let index = 0; index < 1; index++) {
-    let n1 = JSON.parse(JSON.stringify(note));
-        n1._time += 6.66
-        n1._customData._track = "birbs";
-        n1._customData._noteJumpMovementSpeed = 4;
-        n1._customData._noteJumpStartBeatOffset = 20;
-        n1._customData._fake = true;
-        n1._customData._interactable = false;
-        n1._customData._disableSpawnEffect = true;
-        n1._customData._disableNoteGravity = true;
-        n1._customData._color = [1,1,1,1];
-        n1._customData._animation = {}
-            n1._customData._animation._position = [[rnd(-25,12), rnd(55,69), rnd(6.9,69), 0], [rnd(-40,0), rnd(42.0,55), rnd(-69,-6.9), 1, "easeInOutQuint"]]; 
-            n1._customData._animation._rotation = [[10, rnd(-10,10), 0, 0]]; 
-            n1._customData._animation._dissolve = [[0,0]];
-            n1._customData._animation._scale = [[4.20,2.2,1,0]];
-            if (n1._cutDirection != 8) {
-            _notes.push(n1);
-            }
-        }
-}); 
+filterednotes = _notes.filter(n => n._time > 454 && n._time <= 517);
+filterednotes.forEach(note => {
+	if (note._cutDirection != 8) { note._customData._track = "mtnNotes"; }
+	if (note._cutDirection == 8) { note._customData._track = "mtnNotesD"; }
+	note._customData._noteJumpMovementSpeed = 12;
+	note._customData._noteJumpStartBeatOffset = 48;
+	note._customData._disableSpawnEffect = true;
+	note._customData._disableNoteGravity = true;
+	note._customData._animation = {}
+	note._customData._animation._dissolve = [[0, 0], [1, 0.125, "easeOutSine"]]
+	note._customData._animation._position = [[0, 0, -212, 0], [0, 0, 0, 0.49, "easeInOutQuad"]];
+	note._customData._animation._rotation = [[rnd(-90, 50), rnd(-69, 90), rnd(-80, 80), 0], [rnd(-3, 3), rnd(-10, 10), rnd(-2, 2), 0.5, "easeOutBack"]];
+	note._customData._animation._localRotation = [[rnd(-90, 90), rnd(-90, 90), rnd(-90, 90), 0], [rnd(-180, 180), rnd(-180, 180), rnd(-180, 180), 0.25, "easeOutBack"], [0, 0, 0, 0.5, "easeOutBack"]];
+	for (let index = 0; index < 1; index++) {
+		let n1 = JSON.parse(JSON.stringify(note));
+		n1._time += 6.66
+		n1._customData._track = "birbs";
+		n1._customData._noteJumpMovementSpeed = 4;
+		n1._customData._noteJumpStartBeatOffset = 20;
+		n1._customData._fake = true;
+		n1._customData._interactable = false;
+		n1._customData._disableSpawnEffect = true;
+		n1._customData._disableNoteGravity = true;
+		n1._customData._color = [1, 1, 1, 1];
+		n1._customData._animation = {}
+		n1._customData._animation._position = [[rnd(-25, 12), rnd(55, 69), rnd(6.9, 69), 0], [rnd(-40, 0), rnd(42.0, 55), rnd(-69, -6.9), 1, "easeInOutQuint"]];
+		n1._customData._animation._rotation = [[10, rnd(-10, 10), 0, 0]];
+		n1._customData._animation._dissolve = [[0, 0]];
+		n1._customData._animation._scale = [[4.20, 2.2, 1, 0]];
+		if (n1._cutDirection != 8) {
+			_notes.push(n1);
+		}
+	}
+});
 
-  _customEvents.push({
-    _time: 6.66,
-    _type: "AnimateTrack",
-    _data: {
-      _track: "waterNotes",
-      _duration: 0,
-      _dissolve: [[0, 0]],
-      _dissolveArrow: [[0, 0]]
-    }
-  }, {
-    _time: 262,
-    _type: "AnimateTrack",
-    _data: {
-      _track: "waterNotes",
-      _duration: 5,
-      _dissolve: [[0, 0], [1, 1, "easeOutExpo"]],
-      _dissolveArrow: [[0, 0], [1, 0.5, "easeInCubic"]]
-    }
-  }); 
+_customEvents.push({
+	_time: 6.66,
+	_type: "AnimateTrack",
+	_data: {
+		_track: "waterNotes",
+		_duration: 0,
+		_dissolve: [[0, 0]],
+		_dissolveArrow: [[0, 0]]
+	}
+}, {
+	_time: 262,
+	_type: "AnimateTrack",
+	_data: {
+		_track: "waterNotes",
+		_duration: 5,
+		_dissolve: [[0, 0], [1, 1, "easeOutExpo"]],
+		_dissolveArrow: [[0, 0], [1, 0.5, "easeInCubic"]]
+	}
+});
 
-  _customEvents.push({
-    _time: 420.69,
-    _type: "AnimateTrack",
-    _data: {
-      _track: "mtnNotes",
-      _duration: 0,
-      _dissolve: [[0, 0]],
-      _dissolveArrow: [[0, 0]]
-    }
-  }, {
-    _time: 454,
-    _type: "AnimateTrack",
-    _data: {
-      _track: "mtnNotes",
-      _duration: 4,
-      _dissolve: [[0, 0], [rnd(0.666,0.85), 1, "easeOutExpo"]],
-      _dissolveArrow: [[0, 0], [rnd(0.666,0.85), 0.25, "easeInOutCubic"]]
-    }
-  });  
+_customEvents.push({
+	_time: 350,
+	_type: "AnimateTrack",
+	_data: {
+		_track: "mtnNotes",
+		_duration: 0,
+		_dissolve: [[0, 0]],
+		_dissolveArrow: [[0, 0]]
+	}
+}, {
+	_time: 454,
+	_type: "AnimateTrack",
+	_data: {
+		_track: "mtnNotes",
+		_duration: 4,
+		_dissolve: [[0, 0], [rnd(0.666, 0.85), 1, "easeOutExpo"]],
+		_dissolveArrow: [[0, 0], [rnd(0.666, 0.85), 0.25, "easeInOutCubic"]]
+	}
+});
 
-  _customEvents.push({
-    _time: 420.69,
-    _type: "AnimateTrack",
-    _data: {
-      _track: "mtnNotesD",
-      _duration: 0,
-      _dissolve: [[0, 0]],
-      _dissolveArrow: [[0, 0]]
-    }
-  }, {
-    _time: 454,
-    _type: "AnimateTrack",
-    _data: {
-      _track: "mtnNotesD",
-      _duration: 4,
-      _dissolve: [[0, 0], [rnd(0.666,0.85), 1, "easeOutExpo"]],
-      _dissolveArrow: [[0, 0], [rnd(0.666,0.85), 0.25, "easeInOutCubic"]]
-    }
-  });  
+_customEvents.push({
+	_time: 420.69,
+	_type: "AnimateTrack",
+	_data: {
+		_track: "mtnNotesD",
+		_duration: 0,
+		_dissolve: [[0, 0]],
+		_dissolveArrow: [[0, 0]]
+	}
+}, {
+	_time: 454,
+	_type: "AnimateTrack",
+	_data: {
+		_track: "mtnNotesD",
+		_duration: 4,
+		_dissolve: [[0, 0], [rnd(0.666, 0.85), 1, "easeOutExpo"]],
+		_dissolveArrow: [[0, 0], [rnd(0.666, 0.85), 0.25, "easeInOutCubic"]]
+	}
+});
 
 
-  map._customData._environment.push({
-    _id: "Environment\\.\\[\\d+\\]CoreLighting.\\[3\\]DirectionalLight$",
-    _lookupMethod: "Regex",
-    _track: "MountainLight",
-    _active: true
-  });
-    _customEvents.push({
-        _time: 0,
-        _type: "AnimateTrack",
-        _data: {
-          _track: "MountainLight",
-          _duration: 0,
-          _localRotation: [[7, 180, 180, 0]], 
-      
-        }
-    },{
-        _time: 454,
-        _type: "AnimateTrack",
-        _data: {
-          _track: "MountainLight",
-          _duration: 518-454,
-          _localRotation: [[18, 181, 180, 0], [2, 355, 180, 1, "easeInExpo"]],     
-        }
-    });
+map._customData._environment.push({
+	_id: "Environment\\.\\[\\d+\\]CoreLighting.\\[3\\]DirectionalLight$",
+	_lookupMethod: "Regex",
+	_track: "MountainLight",
+	_active: true
+});
+_customEvents.push({
+	_time: 0,
+	_type: "AnimateTrack",
+	_data: {
+		_track: "MountainLight",
+		_duration: 0,
+		_localRotation: [[7, 180, 180, 0]],
+
+	}
+}, {
+	_time: 454,
+	_type: "AnimateTrack",
+	_data: {
+		_track: "MountainLight",
+		_duration: 518 - 454,
+		_localRotation: [[18, 181, 180, 0], [2, 355, 180, 1, "easeInExpo"]],
+	}
+}, {
+	_time: 710,
+	_type: "AnimateTrack",
+	_data: {
+		_track: "MountainLight",
+		_duration: 518 - 454,
+		_localRotation: [0, 180, 30],
+	}
+});
 
 //#endregion
 
@@ -1626,38 +1695,38 @@ _customEvents.push({
 
 filterednotes = _notes.filter(n => n._time > 518 && n._time <= 580);
 filterednotes.forEach(note => {
-    if (note._customData._track != "birbs") {
-    note._customData._track = "flyingNotes"
-    note._customData._noteJumpMovementSpeed = 19;
-    note._customData._noteJumpStartBeatOffset = 2;
-    note._customData._disableSpawnEffect = true;
-    note._customData._disableNoteGravity = true;
-    note._customData._animation = {}
-    note._customData._animation._position = [[rnd(-8,8),rnd(-8,8),-18,0.125], [0,0,0,0.375, "easeInOutCirc"]];
-    note._customData._animation._localRotation = [[rnd(-90,90), rnd(-169,69), rnd(-90,90), 0.125],[0,0,0,0.375,"easeInOutCirc"]];
-    }
+	if (note._customData._track != "birbs") {
+		note._customData._track = "flyingNotes"
+		note._customData._noteJumpMovementSpeed = 19;
+		note._customData._noteJumpStartBeatOffset = 2;
+		note._customData._disableSpawnEffect = true;
+		note._customData._disableNoteGravity = true;
+		note._customData._animation = {}
+		note._customData._animation._position = [[rnd(-8, 8), rnd(-8, 8), -18, 0.125], [0, 0, 0, 0.375, "easeInOutCirc"]];
+		note._customData._animation._localRotation = [[rnd(-90, 90), rnd(-169, 69), rnd(-90, 90), 0.125], [0, 0, 0, 0.375, "easeInOutCirc"]];
+	}
 });
 
 _customEvents.push({
-    _time: 548,
-    _type: "AnimateTrack",
-    _data: {
-      _track: "flyingNotes",
-      _duration: 2,
-      _dissolve: [[1, 0, "splineCatmullRom"],[0.2, 0.5, "splineCatmullRom"], [1, 1, "splineCatmullRom", "easeOutExpo"]],
-      _dissolveArrow: [[0, 0], [1, 1, "easeInOutBounce"]]
-    }
-}); 
-_customEvents.push( {
-    _time: 550,
-    _type: "AnimateTrack",
-    _data: {
-      _track: "flyingNotes",
-      _duration: 581-550,
-      _dissolve: [[0.9, 0], [0.666, 1, "easeInQuad"]],
-      _dissolveArrow: [[1, 0], [0.69, 1, "easeInCubic"]]
-    }
-}); 
+	_time: 548,
+	_type: "AnimateTrack",
+	_data: {
+		_track: "flyingNotes",
+		_duration: 2,
+		_dissolve: [[1, 0, "splineCatmullRom"], [0.2, 0.5, "splineCatmullRom"], [1, 1, "splineCatmullRom", "easeOutExpo"]],
+		_dissolveArrow: [[0, 0], [1, 1, "easeInOutBounce"]]
+	}
+});
+_customEvents.push({
+	_time: 550,
+	_type: "AnimateTrack",
+	_data: {
+		_track: "flyingNotes",
+		_duration: 581 - 550,
+		_dissolve: [[0.9, 0], [0.666, 1, "easeInQuad"]],
+		_dissolveArrow: [[1, 0], [0.69, 1, "easeInCubic"]]
+	}
+});
 
 
 
@@ -1665,117 +1734,175 @@ _customEvents.push( {
 //#endregion
 //#region Tree 581 - 646
 
-function treeRot (beat,angle, mult, side) {
-filterednotes = _notes.filter(n => n._time >= beat && n._time <= beat+1); 
-filterednotes.forEach(note => { 
-for (let i = 0; i <= 4; i++) { 
-    //note._customData._animation = {}
-    if (side == 2) {    
-    if (note._lineIndex == 0) {
-        note._customData._animation._rotation = [[0,0,0,0], [0,(angle*0.5)-(i*mult),0,0.4375, "easeOutExpo"]];
-    }
-    if (note._lineIndex == 1) {
-        note._customData._animation._rotation = [[0,0,0,0], [0,(angle*0.65)-(i*mult),0,0.4375, "easeOutExpo"]];
-    }
-    if (note._lineIndex == 2) {
-        note._customData._animation._rotation = [[0,0,0,0], [0,(angle*0.8)-(i*mult),0,0.4375, "easeOutExpo"]];
-    }
-    if (note._lineIndex == 3) {
-        note._customData._animation._rotation = [[0,0,0,0], [0,(angle)-(i*mult),0,0.4375, "easeOutExpo"]];
-    }
-}
-if (side == 1) {    
-    if (note._lineIndex == 3) {
-        note._customData._animation._rotation = [[0,0,0,0], [0,-(angle*0.5)+(i*mult),0,0.4375, "easeOutExpo"]];
-    }
-    if (note._lineIndex == 2) {
+function treeRot(beat, angle, mult, side) {
+	filterednotes = _notes.filter(n => n._time >= beat && n._time <= beat + 1);
+	filterednotes.forEach(note => {
+		for (let i = 0; i <= 4; i++) {
+			//note._customData._animation = {}
+			if (side == 2) {
+				if (note._lineIndex == 0) {
+					note._customData._animation._rotation = [[0, 0, 0, 0], [0, (angle * 0.5) - (i * mult), 0, 0.4875, "easeOutExpo"]];
+				}
+				if (note._lineIndex == 1) {
+					note._customData._animation._rotation = [[0, 0, 0, 0], [0, (angle * 0.65) - (i * mult), 0, 0.4875, "easeOutExpo"]];
+				}
+				if (note._lineIndex == 2) {
+					note._customData._animation._rotation = [[0, 0, 0, 0], [0, (angle * 0.8) - (i * mult), 0, 0.4875, "easeOutExpo"]];
+				}
+				if (note._lineIndex == 3) {
+					note._customData._animation._rotation = [[0, 0, 0, 0], [0, (angle) - (i * mult), 0, 0.4875, "easeOutExpo"]];
+				}
+			}
+			if (side == 1) {
+				if (note._lineIndex == 3) {
+					note._customData._animation._rotation = [[0, 0, 0, 0], [0, -(angle * 0.5) + (i * mult), 0, 0.4875, "easeOutExpo"]];
+				}
+				if (note._lineIndex == 2) {
 
-        note._customData._animation._rotation = [[0,0,0,0], [0,-(angle*0.65)+(i*mult),0,0.4375, "easeOutExpo"]];
+					note._customData._animation._rotation = [[0, 0, 0, 0], [0, -(angle * 0.65) + (i * mult), 0, 0.4875, "easeOutExpo"]];
+				}
+				if (note._lineIndex == 1) {
+					note._customData._animation._rotation = [[0, 0, 0, 0], [0, -(angle * 0.8) + (i * mult), 0, 0.4875, "easeOutExpo"]];
+				}
+				if (note._lineIndex == 0) {
+					note._customData._animation._rotation = [[0, 0, 0, 0], [0, -(angle) + (i * mult), 0, 0.4875, "easeOutExpo"]];
+				}
+			}
+		}
+		
+	});
+}
+filterednotes = _notes.filter(n => n._time >= 581 && n._time < 614);
+filterednotes.forEach(note => {
+    note._customData._noteJumpStartBeatOffset = 2;
+    note._customData._noteJumpMovementSpeed = 16;
+    note._customData._disableSpawnEffect = true;
+    note._customData._disableNoteGravity = true;
+    note._customData._animation = {}
+    note._customData._animation._dissolve = [[0, 0], [0.87, 0.125, "easeOutExpo"], [0.92, 0.55, "easeOutSine"]];
+    note._customData._animation._dissolveArrow = [[0, 0], [0.85, 0.125, "easeOutExpo"], [0.8, 0.5, "easeOutSine"]];
+    note._customData._animation._scale = [[0.01, 0.01, 1, 0], [1, 1, 1, 0.125, "easeOutCubic"]];
+    if (note._lineIndex == 0) {
+        note._customData._animation._position = [[1.5, rnd(-3, -1), -5, 0], [0, 0, 0, 0.4875, "easeOutExpo"]];
     }
     if (note._lineIndex == 1) {
-        note._customData._animation._rotation = [[0,0,0,0], [0,-(angle*0.8)+(i*mult),0,0.4375, "easeOutExpo"]];
+        note._customData._animation._position = [[0.5, rnd(-3, -1), -5, 0], [0, 0, 0, 0.4875, "easeOutExpo"]];
     }
-    if (note._lineIndex == 0) {
-        note._customData._animation._rotation = [[0,0,0,0], [0,-(angle)+(i*mult),0,0.4375, "easeOutExpo"]];
+    if (note._lineIndex == 2) {
+        note._customData._animation._position = [[-0.5, rnd(-3, -1), -5, 0], [0, 0, 0, 0.4875, "easeOutExpo"]];
     }
-}
-}
-}); 
-}
-filterednotes = _notes.filter(n => n._time >= 581 && n._time < 614); 
-filterednotes.forEach(note => { 
-  note._customData._noteJumpStartBeatOffset = 2;
-  note._customData._noteJumpMovementSpeed = 16;
-  note._customData._disableSpawnEffect = true;
-  note._customData._disableNoteGravity = true;
-  note._customData._animation = {}
-  note._customData._animation._dissolve = [[0,0], [0.87,0.125, "easeOutExpo"], [0.92,0.55, "easeOutSine"]];
-  note._customData._animation._dissolveArrow = [[0,0], [0.85,0.125, "easeOutExpo"], [0.8,0.5, "easeOutSine"]];
-  note._customData._animation._scale = [[0.01,0.01,1,0], [1,1,1,0.125, "easeOutCubic"]];
-  if (note._lineIndex == 0) {
-    note._customData._animation._position = [[1.5,rnd(-3,-1),-5,0], [0,0,0,0.5, "easeOutExpo"]];
-}
-if (note._lineIndex == 1) {
-    note._customData._animation._position = [[0.5,rnd(-3,-1),-5,0], [0,0,0,0.5, "easeOutExpo"]];
-}
-if (note._lineIndex == 2) {
-    note._customData._animation._position = [[-0.5,rnd(-3,-1),-5,0], [0,0,0,0.5, "easeOutExpo"]];
-}
-if (note._lineIndex == 3) {
-    note._customData._animation._position = [[-1.5,rnd(-3,-1),-5,0], [0,0,0,0.5, "easeOutExpo"]];
-} 
-}); 
+    if (note._lineIndex == 3) {
+        note._customData._animation._position = [[-1.5, rnd(-3, -1), -5, 0], [0, 0, 0, 0.4875, "easeOutExpo"]];
+    }
+    if (note._time <= 612) {
+    for (let index = 1; index < blurSamples * 2; index++) {
+        let n2 = JSON.parse(JSON.stringify(note));
+        n2._time += (blurSpacing * 0.01713) * (index * 2)
+        n2._customData._animation._dissolveArrow = [[0, 0.2499], [0.45, 0.25], [0, 0.475 - (index * 0.005), "easeInQuad"]];
+        n2._customData._animation._dissolve = [[0, 0.2499], [0.2, 0.25], [0, 0.4875 - (index * 0.005), "easeOutCubic"]];
+        n2._customData._animation._scale = [[0.125, 0.125, 4.2069, 0.25], [2, 2, 2, 0.5 - (index * 0.005), "easeInCubic"]];
+        n2._customData._fake = true;
+        n2._customData._interactable = false;
+        n2._customData._disableNoteGravity = true;
+        n2._customData._disableSpawnEffect = true;
+        _notes.push(n2);
+        }
+    }
+});
 // SWIFTER CHANGE NJS HERE
 // 17.5 = 17
 // 19 = 18
-filterednotes = _notes.filter(n => n._time >= 614 && n._time < 678); 
-filterednotes.forEach(note => { 
-  note._customData._noteJumpStartBeatOffset = 2;
-  note._customData._noteJumpMovementSpeed = 17.5;
-  note._customData._disableSpawnEffect = true;
-  note._customData._disableNoteGravity = true;
-  note._customData._animation = {}
-  note._customData._animation._dissolve = [[0,0], [0.86,0.25, "easeOutExpo"], [0.91,0.5, "easeOutSine"]];
-  note._customData._animation._dissolveArrow = [[0,0], [0.85,0.125, "easeOutExpo"], [0.9,0.5, "easeOutSine"]];
-  note._customData._animation._scale = [[0.01,0.01,1,0], [1,1,1,0.25, "easeOutCubic"]];
-  if (note._lineIndex == 0) {
-    note._customData._animation._position = [[1.5,rnd(-4.20,4.20),-7,0], [0,0,0,0.475, "easeOutQuint"]];
-}
-if (note._lineIndex == 1) {
-    note._customData._animation._position = [[0.5,rnd(-4.20,4.20),-7,0], [0,0,0,0.475, "easeOutQuint"]];
-}
-if (note._lineIndex == 2) {
-    note._customData._animation._position = [[-0.5,rnd(-4.20,4.20),-7,0], [0,0,0,0.475, "easeOutQuint"]];
-}
-if (note._lineIndex == 3) {
-    note._customData._animation._position = [[-1.5,rnd(-4.20,4.20),-7,0], [0,0,0,0.475, "easeOutQuint"]];
-} 
-}); 
+filterednotes = _notes.filter(n => n._time >= 614 && n._time < 678);
+filterednotes.forEach(note => {
+    note._customData._noteJumpStartBeatOffset = 2;
+    note._customData._noteJumpMovementSpeed = 17;
+    note._customData._disableSpawnEffect = true;
+    note._customData._disableNoteGravity = true;
+    note._customData._animation = {}
+    note._customData._animation._dissolve = [[0, 0], [0.86, 0.25, "easeOutExpo"], [0.91, 0.5, "easeOutSine"]];
+    note._customData._animation._dissolveArrow = [[0, 0], [0.85, 0.125, "easeOutExpo"], [0.9, 0.5, "easeOutSine"]];
+    note._customData._animation._scale = [[0.01, 0.01, 1, 0], [1, 1, 1, 0.25, "easeOutCubic"]];
+    if (note._lineIndex == 0) {
+        note._customData._animation._position = [[1.5, rnd(-4.20, 4.20), -7.5, 0], [0, 0, 0, 0.4875, "easeOutQuint"]];
+    }
+    if (note._lineIndex == 1) {
+        note._customData._animation._position = [[0.5, rnd(-4.20, 4.20), -7.5, 0], [0, 0, 0, 0.4875, "easeOutQuint"]];
+    }
+    if (note._lineIndex == 2) {
+        note._customData._animation._position = [[-0.5, rnd(-4.20, 4.20), -7.5, 0], [0, 0, 0, 0.4875, "easeOutQuint"]];
+    }
+    if (note._lineIndex == 3) {
+        note._customData._animation._position = [[-1.5, rnd(-4.20, 4.20), -7.5, 0], [0, 0, 0, 0.4875, "easeOutQuint"]];
+    }
+    if (note._customData._fake != true) {
+    for (let index = 1; index <= 2; index++) {
+
+        let n1 = JSON.parse(JSON.stringify(note));
+        n1._time -= index*0.01243;
+        n1._customData._noteJumpStartBeatOffset = 4;
+        n1._customData._animation._rotation = [[getRndInteger(-75, 75), getRndInteger(-30, 30), getRndInteger(-15, 15), 0], [0, 0, 0, 0.4875, "easeOutQuad"]];
+        n1._customData._animation._localRotation = [[getRndInteger(-150, 150), getRndInteger(-150, 150), getRndInteger(-150, 150), 0], [getRndInteger(-1, 1), getRndInteger(-1, 1), getRndInteger(-1, 1), 0.4375, "easeInOutCubic"]];
+        //n1._customData._animation._position = [[rnd(-10,10),rnd(-6.9,13.37),35,0], [0,0,0,0.475, "easeInOutBack"]];
+        n1._customData._animation._dissolveArrow = [[rnd(1.5,4.5)/10,0],[0,0.4375,"easeOutCubic"]];
+        n1._customData._animation._dissolve = [[0,0],[rnd(5,9)/10,0,"easeInOutCubic"],[0,0.4875,"easeOutExpo"]];
+        n1._customData._fake = true;
+        n1._customData._interactable = false;
+         _notes.push(n1);
+        }
+      }
+});
 
 
-filterednotes = _notes.filter(n => n._time >= 678 && n._time < 711); 
-filterednotes.forEach(note => { 
-  note._customData._noteJumpStartBeatOffset = 2;
-  note._customData._noteJumpMovementSpeed = 19;
-  note._customData._disableSpawnEffect = true;
-  note._customData._disableNoteGravity = true;
-  note._customData._animation = {}
-  note._customData._animation._dissolve = [[0,0], [0.85,0.25, "easeOutExpo"], [0.9,0.5, "easeOutSine"]];
-  note._customData._animation._dissolveArrow = [[0,0], [0.8,0.125, "easeOutExpo"], [0.85,0.5, "easeOutSine"]];
-  note._customData._animation._scale = [[0.01,0.01,1,0], [1,1,1,0.25, "easeOutCubic"]];
-  if (note._lineIndex == 0) {
-    note._customData._animation._position = [[1.5,rnd(-10,10),-10,0], [0,0,0,0.475, "easeOutExpo"]];
-}
-if (note._lineIndex == 1) {
-    note._customData._animation._position = [[0.5,rnd(-10,10),-10,0], [0,0,0,0.475, "easeOutExpo"]];
-}
-if (note._lineIndex == 2) {
-    note._customData._animation._position = [[-0.5,rnd(-10,10),-10,0], [0,0,0,0.475, "easeOutExpo"]];
-}
-if (note._lineIndex == 3) {
-    note._customData._animation._position = [[-1.5,rnd(-10,10),-10,0], [0,0,0,0.475, "easeOutExpo"]];
-} 
-}); 
+filterednotes = _notes.filter(n => n._time >= 678 && n._time < 711);
+filterednotes.forEach(note => {
+	note._customData._noteJumpStartBeatOffset = 1;
+	note._customData._noteJumpMovementSpeed = 18;
+	note._customData._disableSpawnEffect = true;
+	note._customData._disableNoteGravity = true;
+	note._customData._animation = {}
+	note._customData._animation._dissolve = [[0, 0], [0.85, 0.25, "easeOutExpo"], [0.9, 0.5, "easeOutSine"]];
+	note._customData._animation._dissolveArrow = [[0, 0], [0.8, 0.125, "easeOutExpo"], [0.85, 0.5, "easeOutSine"]];
+	note._customData._animation._scale = [[0.01, 0.01, 1, 0], [1, 1, 1, 0.25, "easeOutCubic"]];
+	if (note._lineIndex == 0) {
+		note._customData._animation._position = [[2.5, rnd(-10, 10), -15, 0], [0, 0, 0, 0.4875, "easeOutExpo"]];
+	}
+	if (note._lineIndex == 1) {
+		note._customData._animation._position = [[1, rnd(-10, 10), -15, 0], [0, 0, 0, 0.4875, "easeOutExpo"]];
+	}
+	if (note._lineIndex == 2) {
+		note._customData._animation._position = [[-1, rnd(-10, 10), -15, 0], [0, 0, 0, 0.4875, "easeOutExpo"]];
+	}
+	if (note._lineIndex == 3) {
+		note._customData._animation._position = [[-2.5, rnd(-10, 10), -15, 0], [0, 0, 0, 0.4875, "easeOutExpo"]];
+	}
+	if (note._customData._fake != true) {
+	for (let index = 1; index <= 2; index++) {
+
+		let n1 = JSON.parse(JSON.stringify(note));
+		n1._time -= index*0.0125;
+		n1._customData._noteJumpStartBeatOffset = 2;
+		n1._customData._animation._rotation = [[getRndInteger(-15, 5), getRndInteger(-15, 15), getRndInteger(-15, 15), 0], [0, 0, 0, 0.4875, "easeInOutCubic"]];
+		n1._customData._animation._localRotation = [[getRndInteger(-150, 150), getRndInteger(-150, 150), getRndInteger(-150, 150), 0], [getRndInteger(-1, 1), getRndInteger(-1, 1), getRndInteger(-1, 1), 0.4875, "easeInOutBack"]];
+		n1._customData._animation._dissolveArrow = [[rnd(1.5,4.5)/10,0],[0,0.48375,"easeOutCubic"]];
+		n1._customData._animation._dissolve = [[0,0],[rnd(5,9)/10,0.25,"easeInOutCubic"],[0,0.625,"easeOutExpo"]];
+		if (n1._lineIndex == 0) {
+			n1._customData._animation._position = [[-5, rnd(-10, 10), -30, 0], [0, 0, 0, 0.4875, "easeOutBack"]];
+		}
+		if (n1._lineIndex == 1) {
+			n1._customData._animation._position = [[-2.5, rnd(-10, 10), -30, 0], [0, 0, 0, 0.4875, "easeOutBack"]];
+		}
+		if (n1._lineIndex == 2) {
+			n1._customData._animation._position = [[2.5, rnd(-10, 10), -30, 0], [0, 0, 0, 0.4875, "easeOutBack"]];
+		}
+		if (n1._lineIndex == 3) {
+			n1._customData._animation._position = [[5, rnd(-10, 10), -30, 0], [0, 0, 0, 0.4875, "easeOutBack"]];
+		}
+		n1._customData._fake = true;
+		n1._customData._interactable = false;
+		  _notes.push(n1);
+		}
+	}
+});
 
 
 let angle = 10
@@ -1806,13 +1933,13 @@ treeRot(615.5, angle, multiplier, 2)
 treeRot(617.0, angle, multiplier, 1)
 treeRot(618.5, angle, multiplier, 2)
 treeRot(620.0, angle, multiplier, 1)
-treeRot(621, angle/2, multiplier, 1)
+treeRot(621, angle / 2, multiplier, 1)
 treeRot(622.0, angle, multiplier, 1)
 treeRot(623.5, angle, multiplier, 2)
 treeRot(625.0, angle, multiplier, 1)
 treeRot(626.5, angle, multiplier, 2)
 treeRot(628.0, angle, multiplier, 1)
-treeRot(629, angle/2, multiplier, 1)
+treeRot(629, angle / 2, multiplier, 1)
 treeRot(630.0, angle, multiplier, 1)
 treeRot(631.5, angle, multiplier, 2)
 treeRot(630.0, angle, multiplier, 1)
@@ -1820,7 +1947,7 @@ treeRot(631.5, angle, multiplier, 2)
 treeRot(633.0, angle, multiplier, 1)
 treeRot(634.5, angle, multiplier, 2)
 treeRot(636.0, angle, multiplier, 1)
-treeRot(637, angle/2, multiplier, 1)
+treeRot(637, angle / 2, multiplier, 1)
 
 treeRot(638.0, 10.0, multiplier, 2)
 treeRot(639.5, 10.0, multiplier, 1)
@@ -1830,16 +1957,16 @@ treeRot(644.0, 13.5, multiplier, 2)
 treeRot(645.0, 6.90, multiplier, 1)
 
 function lmaoFuckThisShitR(time, angle, multiplier) {
-    treeRot(time, angle, multiplier, 2)
-    treeRot(time+1.5, angle, multiplier, 1)
-    treeRot(time+3, angle, multiplier, 2)
-    treeRot(time+4.5, angle, multiplier, 1)
+	treeRot(time, angle, multiplier, 2)
+	treeRot(time + 1.5, angle, multiplier, 1)
+	treeRot(time + 3, angle, multiplier, 2)
+	treeRot(time + 4.5, angle, multiplier, 1)
 }
 function lmaoFuckThisShitL(time, angle, multiplier) {
-    treeRot(time, angle, multiplier, 1)
-    treeRot(time+1.5, angle, multiplier, 2)
-    treeRot(time+3, angle, multiplier, 1)
-    treeRot(time+4.5, angle, multiplier, 2)
+	treeRot(time, angle, multiplier, 1)
+	treeRot(time + 1.5, angle, multiplier, 2)
+	treeRot(time + 3, angle, multiplier, 1)
+	treeRot(time + 4.5, angle, multiplier, 2)
 }
 lmaoFuckThisShitL(646, 8, 1)
 lmaoFuckThisShitL(654, 8, 1)
@@ -1868,86 +1995,86 @@ treeRot(706.0, 10.0, 1, 1)
 
 filterednotes = _notes.filter(n => n._time > 717 && n._time <= 808);
 filterednotes.forEach(note => {
-    note._customData._track = "waterNotes2";
-    note._customData._noteJumpMovementSpeed = 8;
-    note._customData._noteJumpStartBeatOffset = 10;
-    note._customData._disableNoteGravity = true;
-    note._customData._disableSpawnEffect = true;
-    note._customData._animation = {}
-    if (note._cutDirection == 8) {
-        note._customData._animation._dissolveArrow = [[0.1,0]]; 
-    }
-    note._customData._animation._rotation = [[0,rnd(-4,4),0,0.25], [0,0,0,0.5, "easeInOutBack"]]
-    note._customData._animation._localRotation = [[rnd(-45,45),rnd(-45,45),rnd(-45,45),0],[rnd(-45,45),rnd(-45,45),rnd(-45,45),0.23, "easeInOutBack"], [0,0,0,0.5, "easeInOutBack"]]
-    if (note._lineLayer == 0) {
-        note._customData._animation._position = [[rnd(-1.125,1.125),rnd(-0.65,-0.25),0,0.25], [0,0,0,0.5, "easeInOutBack"]]
-        }
-    if (note._lineLayer == 1) {
-        note._customData._animation._position = [[rnd(-1.125,1.125),rnd(-1.35,-0.9),0,0.25], [0,0,0,0.5, "easeInOutBack"]]
-    }
-    if (note._lineLayer == 2) {
-        note._customData._animation._position = [[rnd(-1.125,1.125),rnd(-2.25,-1.75),0,0.25], [0,0,0,0.5, "easeInOutCubic"]]
-        }
-    for (let index = 0; index < 1; index++) {
-    let n1 = JSON.parse(JSON.stringify(note));
-        n1._time -= 0.0125
-        n1._customData._track = "waterNotesF2";
-        n1._customData._noteJumpMovementSpeed = 2;
-        n1._customData._noteJumpStartBeatOffset = 8;
-        n1._customData._fake = true;
-        n1._customData._interactable = false;
-        n1._customData._disableSpawnEffect = true;
-        n1._customData._disableNoteGravity = true;
-        n1._customData._color = [0.5,0.5,0.5,0.5];
-        n1._customData._animation = {}
-        if (n1._lineLayer != 0) {
-            n1._lineLayer = 0;
-            n1._customData._animation._dissolve = [[0.2,0.125], [0,0.375,"easeOutCubic"]];
-            n1._customData._animation._position = [[0,-1,20,0], [0,-2.5,25,0.5, "easeOutQuad"]];
-        }
-        n1._customData._animation._position = [[0,-1,20,0.25], [0,-2,15,0.5, "easeOutSine"]];
-        n1._customData._animation._dissolveArrow = [[0,0]];
-        n1._customData._animation._dissolve = [[0,0.25],[0.35,0.375, "easeInOutQuad"], [0,0.675,"easeInOutBounce"]];
-        n1._customData._animation._scale = [[1.2,0.01,3,0.125], [10,0.01,50,0.6, "easeInExpo"]];
-        _notes.push(n1);
+	note._customData._track = "waterNotes2";
+	note._customData._noteJumpMovementSpeed = 8;
+	note._customData._noteJumpStartBeatOffset = 22;
+	note._customData._disableNoteGravity = true;
+	note._customData._disableSpawnEffect = true;
+	note._customData._animation = {}
+	if (note._cutDirection == 8) {
+		note._customData._animation._dissolveArrow = [[0.1, 0]];
+	}
+	note._customData._animation._rotation = [[0, rnd(-4, 4), 0, 0.25], [0, 0, 0, 0.5, "easeInOutBack"]]
+	note._customData._animation._localRotation = [[rnd(-45, 45), rnd(-45, 45), rnd(-45, 45), 0], [rnd(-45, 45), rnd(-45, 45), rnd(-45, 45), 0.23, "easeInOutBack"], [0, 0, 0, 0.5, "easeInOutBack"]]
+	if (note._lineLayer == 0) {
+		note._customData._animation._position = [[rnd(-1.125, 1.125), rnd(-0.65, -0.25), 0, 0.375], [0, 0, 0, 0.5, "easeInOutBack"]]
+	}
+	if (note._lineLayer == 1) {
+		note._customData._animation._position = [[rnd(-1.125, 1.125), rnd(-1.35, -0.9), 0, 0.375], [0, 0, 0, 0.5, "easeInOutBack"]]
+	}
+	if (note._lineLayer == 2) {
+		note._customData._animation._position = [[rnd(-1.125, 1.125), rnd(-2.25, -1.75), 0, 0.375], [0, 0, 0, 0.5, "easeInOutCubic"]]
+	}
+	for (let index = 0; index < 1; index++) {
+		let n1 = JSON.parse(JSON.stringify(note));
+		n1._time -= 0.0125
+		n1._customData._track = "waterNotesF2";
+		n1._customData._noteJumpMovementSpeed = 2;
+		n1._customData._noteJumpStartBeatOffset = 12;
+		n1._customData._fake = true;
+		n1._customData._interactable = false;
+		n1._customData._disableSpawnEffect = true;
+		n1._customData._disableNoteGravity = true;
+		n1._customData._color = [2, 2, 2, 2];
+		n1._customData._animation = {}
+		if (n1._lineLayer != 0) {
+			n1._lineLayer = 0;
+			n1._customData._animation._dissolve = [[0.2, 0.125], [0, 0.375, "easeOutCubic"]];
+			n1._customData._animation._position = [[0, -2, 20, 0], [0, -3.75, 25, 0.5, "easeOutQuad"]];
+		}
+		n1._customData._animation._position = [[0, -2, 20, 0.25], [0, -3, 15, 0.5, "easeOutSine"]];
+		n1._customData._animation._dissolveArrow = [[0, 0]];
+		n1._customData._animation._dissolve = [[0, 0.25], [0.35, 0.375, "easeInOutQuad"], [0, 0.675, "easeInOutBounce"]];
+		n1._customData._animation._scale = [[1.2, 0.01, 3, 0.125], [10, 0.01, 50, 0.6, "easeInExpo"]];
+		_notes.push(n1);
 
-    }
+	}
 });
 
 _customEvents.push({
-    _time: 666,
-    _type: "AnimateTrack",
-    _data: {
-      _track: "waterNotes2",
-      _duration: 0,
-      _dissolve: [[0, 0]],
-      _dissolveArrow: [[0, 0]]
-    }
-  }, {
-    _time: 710,
-    _type: "AnimateTrack",
-    _data: {
-      _track: "waterNotes2",
-      _duration: 4,
-      _dissolve: [[0, 0], [1, 1, "easeOutExpo"]],
-      _dissolveArrow: [[0, 0], [1, 0.5, "easeInCubic"]]
-    }
-  }); 
+	_time: 666,
+	_type: "AnimateTrack",
+	_data: {
+		_track: "waterNotes2",
+		_duration: 0,
+		_dissolve: [[0, 0]],
+		_dissolveArrow: [[0, 0]]
+	}
+}, {
+	_time: 710,
+	_type: "AnimateTrack",
+	_data: {
+		_track: "waterNotes2",
+		_duration: 4,
+		_dissolve: [[0, 0], [1, 1, "easeOutExpo"]],
+		_dissolveArrow: [[0, 0], [1, 0.5, "easeInCubic"]]
+	}
+});
 
 
 
 
 
 
-  // THE GLUE
-  _customEvents.push({
-    _time: 0.420666,
-    _type: "AssignTrackParent",
-    _data: {
-    _childrenTracks: ["waterNotes2","waterNotesF2","mtnNotes", "mtnNotesD", "waterNotes", "waterNotesF", "allTunnelTrackPush", "flyingNotes"], 
-    _parentTrack: "noteChild" 
-    }
-  });
+// THE GLUE
+_customEvents.push({
+	_time: 0.420666,
+	_type: "AssignTrackParent",
+	_data: {
+		_childrenTracks: ["waterNotes2", "waterNotesF2", "mtnNotes", "mtnNotesD", "waterNotes", "waterNotesF", "allTunnelTrackPush", "flyingNotes"],
+		_parentTrack: "noteChild"
+	}
+});
 //#endregion
 //#endregion
 
@@ -1968,10 +2095,10 @@ let tog2;
 // let _pointDefinitions = map._customData._pointDefinitions;
 
 function add3(arr1, arr2) {
-    arr1[0] += arr2[0];
-    arr1[1] += arr2[1];
-    arr1[2] += arr2[2];
-    return arr1;
+	arr1[0] += arr2[0];
+	arr1[1] += arr2[1];
+	arr1[2] += arr2[2];
+	return arr1;
 }
 
 function DisIn(track, time) {
@@ -2019,7 +2146,7 @@ function Circ(trackN, startBeat, dur, radius, amount, h, l, xPos, yPos, zPos, ro
 		let sx = xPos + Math.cos(radians) * radius - w / 2;
 		let sy = yPos + Math.sin(radians) * radius - h / 2;
 		_obstacles.push({
-			_time: (startBeat + HJD)+0.05*i,
+			_time: (startBeat + HJD) + 0.05 * i,
 			_duration: dur,
 			_lineIndex: 0,
 			_type: 0,
@@ -2202,7 +2329,7 @@ function particleCircle(beat, endBeat, amount, radius, x, y, z, color, trackL) {
 		let duration = (endBeat - beat) + HJD;
 		let offset = (duration / amount) * i;
 		_obstacles.push({
-			_time: (beat+HJD)+offset,
+			_time: (beat + HJD) + offset,
 			_duration: 7,
 			_lineIndex: 0,
 			_type: 0,
@@ -2211,14 +2338,14 @@ function particleCircle(beat, endBeat, amount, radius, x, y, z, color, trackL) {
 				_interactable: false,
 				_track: partTrack,
 				_scale: [0.05, 0.05, 0.05],
-				_rotation: [0+offset, 0, getRndInteger(-360, 360)-offset],
+				_rotation: [0 + offset, 0, getRndInteger(-360, 360) - offset],
 				_localRotation: [0, 0, 0],
 				_position: [0, 0],
 				_animation: {
 					_color: (color) ? color : [[1, 1, 1, 1, 0]],
-					_definitePosition: [[0,radius,0,0],[0,radius/2,-radius/2,1, "easeInSine"]],
-					_rotation: [[0,0,0,0],[0,0,90.9,1, "easeInCirc"]],
-					_dissolve: [[0,0],[1,0],[1,0.9],[0,1]]
+					_definitePosition: [[0, radius, 0, 0], [0, radius / 2, -radius / 2, 1, "easeInSine"]],
+					_rotation: [[0, 0, 0, 0], [0, 0, 90.9, 1, "easeInCirc"]],
+					_dissolve: [[0, 0], [1, 0], [1, 0.9], [0, 1]]
 				}
 			}
 		})
@@ -2227,8 +2354,8 @@ function particleCircle(beat, endBeat, amount, radius, x, y, z, color, trackL) {
 			_time: 0,
 			_type: "AssignTrackParent",
 			_data: {
-			  _childrenTracks: [partTrack],
-			  _parentTrack: "partTrackP"
+				_childrenTracks: [partTrack],
+				_parentTrack: "partTrackP"
 			}
 		})
 
@@ -2237,8 +2364,8 @@ function particleCircle(beat, endBeat, amount, radius, x, y, z, color, trackL) {
 				_time: 0,
 				_type: "AssignTrackParent",
 				_data: {
-				  _childrenTracks: ["partTrackP"],
-				  _parentTrack: trackL
+					_childrenTracks: ["partTrackP"],
+					_parentTrack: trackL
 				}
 			})
 
@@ -2247,10 +2374,10 @@ function particleCircle(beat, endBeat, amount, radius, x, y, z, color, trackL) {
 		_customEvents.push({
 			_time: beat,
 			_type: "AnimateTrack",
-			_data:{
+			_data: {
 				_track: "partTrackP",
 				_duration: duration,
-				_position: [[x,y,z,0]]
+				_position: [[x, y, z, 0]]
 			}
 		})
 
@@ -2265,7 +2392,7 @@ function particleCircleLorg(beat, endBeat, amount, radius, x, y, z, color) {
 		let duration = (endBeat - beat) + HJD;
 		let offset = (duration / amount) * i;
 		_obstacles.push({
-			_time: beat+offset,
+			_time: beat + offset,
 			_duration: 7,
 			_lineIndex: 0,
 			_type: 0,
@@ -2279,9 +2406,9 @@ function particleCircleLorg(beat, endBeat, amount, radius, x, y, z, color) {
 				_position: [0, 0],
 				_animation: {
 					_color: (color) ? color : [[1, 1, 1, 1, 0]],
-					_definitePosition: [[0,radius,0,0],[0,radius/2,-radius/2,1, "easeInSine"]],
-					_rotation: [[0,0,0,0],[0,0,90.9,1, "easeInCirc"]],
-					_dissolve: [[0,0],[1,0],[1,0.9],[0,1]]
+					_definitePosition: [[0, radius, 0, 0], [0, radius / 2, -radius / 2, 1, "easeInSine"]],
+					_rotation: [[0, 0, 0, 0], [0, 0, 90.9, 1, "easeInCirc"]],
+					_dissolve: [[0, 0], [1, 0], [1, 0.9], [0, 1]]
 				}
 			}
 		})
@@ -2290,18 +2417,18 @@ function particleCircleLorg(beat, endBeat, amount, radius, x, y, z, color) {
 			_time: 0,
 			_type: "AssignTrackParent",
 			_data: {
-			  _childrenTracks: [partTrack],
-			  _parentTrack: "partTrackP"
+				_childrenTracks: [partTrack],
+				_parentTrack: "partTrackP"
 			}
 		})
 
 		_customEvents.push({
 			_time: beat,
 			_type: "AnimateTrack",
-			_data:{
+			_data: {
 				_track: "partTrackP",
 				_duration: duration,
-				_position: [[x,y,z,0]]
+				_position: [[x, y, z, 0]]
 			}
 		})
 
@@ -2453,17 +2580,17 @@ let amount = 15;
 _pointDefinitions.push({
 	_name: "waveRot",
 	_points: [
-		  [0, 0, 0, 0],
-		  [-amount, amount, 0, 0.125],
-		  [0, 0, 0, 0.25],
-		  [amount, -amount, 0, 0.375],
-		  [0, 0, 0, 0.5],
-		  [-amount, amount, 0, 0.625],
-		  [0, 0, 0, 0.75],
-		  [amount, -amount, 0, 0.875],
-		  [0, 0, 0, 1]
-	  ]
-  })
+		[0, 0, 0, 0],
+		[-amount, amount, 0, 0.125],
+		[0, 0, 0, 0.25],
+		[amount, -amount, 0, 0.375],
+		[0, 0, 0, 0.5],
+		[-amount, amount, 0, 0.625],
+		[0, 0, 0, 0.75],
+		[amount, -amount, 0, 0.875],
+		[0, 0, 0, 1]
+	]
+})
 
 _pointDefinitions.push({
 	_name: "RainbowWhite",
@@ -2613,17 +2740,17 @@ function shakey(points, xAmount, yAmount, zAmount, easing = "easeLinear") {
 	let int = 1 / points;
 	let path = [];
 	for (let point = 0; point < points; point++) {
-	  path.push([
-		Math.random() * xAmount - xAmount / 2,
-		Math.random() * yAmount - yAmount / 2,
-		Math.random() * zAmount - zAmount / 2,
-		int * point,
-		easing
-	  ]);
+		path.push([
+			Math.random() * xAmount - xAmount / 2,
+			Math.random() * yAmount - yAmount / 2,
+			Math.random() * zAmount - zAmount / 2,
+			int * point,
+			easing
+		]);
 	}
 	path.push([0, 0, 0, 1, easing]);
 	return path;
-  }
+}
 
 //#region old sphere N
 
@@ -2826,44 +2953,44 @@ tracks.push("allTrack");
 //#region sphere
 
 function sphere(track, start, end, resolution, size, pos, color) {
-    const deg2rad = Math.PI / 180;
-    let step = 360 / resolution;
-    let count = 0;
-    for (let x = 0; x <= 180; x += step) {
-        for (let y = 0; y < 360; y += step) {
-            let rot = [x, y, 0];
-            let mathRot = copy(rot);
-            let tileSize = 2 * size * Math.tan(Math.PI / (resolution)) * 1.02;
-            mathRot = mathRot.map(z => z * deg2rad);
+	const deg2rad = Math.PI / 180;
+	let step = 360 / resolution;
+	let count = 0;
+	for (let x = 0; x <= 180; x += step) {
+		for (let y = 0; y < 360; y += step) {
+			let rot = [x, y, 0];
+			let mathRot = copy(rot);
+			let tileSize = 2 * size * Math.tan(Math.PI / (resolution)) * 1.02;
+			mathRot = mathRot.map(z => z * deg2rad);
 
-            let dir = new three.Vector3(0, size, -tileSize/2).applyEuler(new three.Euler(...mathRot, "YXZ"));
-            let newPos = [dir.x, dir.y, dir.z];
-            newPos[0] += pos[0] - (tileSize/2);
-            newPos[1] += pos[1] - (tileSize/2);
-            newPos[2] += pos[2] - (tileSize/2);
+			let dir = new three.Vector3(0, size, -tileSize / 2).applyEuler(new three.Euler(...mathRot, "YXZ"));
+			let newPos = [dir.x, dir.y, dir.z];
+			newPos[0] += pos[0] - (tileSize / 2);
+			newPos[1] += pos[1] - (tileSize / 2);
+			newPos[2] += pos[2] - (tileSize / 2);
 
-            _obstacles.push({
-                _time: start + HJD,
-                _lineIndex: 0,
-                _type: 0,
-                _duration: end - start,
-                _width: 0,
-                _customData: {
-                    _color: color,
-                    _animation: {
-                        _definitePosition: newPos,
-                        _localRotation: rot
-                    },
-                    _scale: [tileSize, 0.1, tileSize],
-                    _track: track
-                }
-            })
+			_obstacles.push({
+				_time: start + HJD,
+				_lineIndex: 0,
+				_type: 0,
+				_duration: end - start,
+				_width: 0,
+				_customData: {
+					_color: color,
+					_animation: {
+						_definitePosition: newPos,
+						_localRotation: rot
+					},
+					_scale: [tileSize, 0.1, tileSize],
+					_track: track
+				}
+			})
 
-            count++;
-        }
-    }
+			count++;
+		}
+	}
 
-    console.log("Walls in sphere: " + count);
+	console.log("Walls in sphere: " + count);
 }
 
 // sphere("testSphere", 6, 134, 16*8, 4, [0,200,0], [0.25,0.25,0.25,0]);
@@ -2878,84 +3005,84 @@ function partLoop(start, end, amount, color) {
 		let trackR = `partLoopR,${start},${i}`;
 		spin(trackL, "spinAroundZneg", 6, 134, 4, EL);
 		spin(trackR, "spinAroundZneg", 6, 134, 4, EL);
-		let dur = (((end - start) / amount) + HJD)*4;
+		let dur = (((end - start) / amount) + HJD) * 4;
 		let offs = ((end - start) / amount) * i;
 		_obstacles.push({
 			_time: start + offs, //left
-			_duration: dur-HJD,
+			_duration: dur - HJD,
 			_lineIndex: 0,
 			_type: 0,
 			_width: 0,
-			_customData:{
+			_customData: {
 				_interactable: false,
 				_track: trackL,
-				_scale: [0.25,0.25,0.05],
-				_rotation: [0,0,0],
-				_localRotation: [0,0,0],
-				_position: [-4,0],
+				_scale: [0.25, 0.25, 0.05],
+				_rotation: [0, 0, 0],
+				_localRotation: [0, 0, 0],
+				_position: [-4, 0],
 				_animation: {
-					_color: (color) ? color : [[1,1,1,1,0]],
-					_definitePosition: [[0,0,0,0],[-7,0,26,0.25, "easeOutCubic"],[16,-10,0,1, "easeInOutCubic"]],
+					_color: (color) ? color : [[1, 1, 1, 1, 0]],
+					_definitePosition: [[0, 0, 0, 0], [-7, 0, 26, 0.25, "easeOutCubic"], [16, -10, 0, 1, "easeInOutCubic"]],
 					_rotation: [
-						[0,0,0,0],
-						[0,0,180,0.5, "splineCatmullRom"],
-						[0,0,360,1, "splineCatmullRom"],
+						[0, 0, 0, 0],
+						[0, 0, 180, 0.5, "splineCatmullRom"],
+						[0, 0, 360, 1, "splineCatmullRom"],
 					],
 					_localRotation: [
-							[
-								getRndInteger(-0, 0),
-								getRndInteger(-0, 0),
-								getRndInteger(-0, 0),
-								0
-							],
-							[
-								getRndInteger(-0, 0),
-								getRndInteger(-0, 0),
-								getRndInteger(-0, 0),
-								1
-							]
-								],
-					_dissolve: [[0,0],[1,0.1],[1,0.9],[0,1]],
-					_scale: [[1,1,1,0],[1,1,100,1]]
+						[
+							getRndInteger(-0, 0),
+							getRndInteger(-0, 0),
+							getRndInteger(-0, 0),
+							0
+						],
+						[
+							getRndInteger(-0, 0),
+							getRndInteger(-0, 0),
+							getRndInteger(-0, 0),
+							1
+						]
+					],
+					_dissolve: [[0, 0], [1, 0.1], [1, 0.9], [0, 1]],
+					_scale: [[1, 1, 1, 0], [1, 1, 100, 1]]
 				}
 			}
-		},{
+		}, {
 			_time: start + offs, //right
 			_duration: dur,
 			_lineIndex: 0,
 			_type: 0,
 			_width: 0,
-			_customData:{
+			_customData: {
 				_interactable: false,
 				_track: trackR,
-				_scale: [0.25,0.25,0.05],
-				_rotation: [0,0,0],
-				_localRotation: [0,0,0],
-				_position: [4,0],
+				_scale: [0.25, 0.25, 0.05],
+				_rotation: [0, 0, 0],
+				_localRotation: [0, 0, 0],
+				_position: [4, 0],
 				_animation: {
-					_color: (color) ? color : [[1,1,1,1,0]],
-					_definitePosition: [[0,0,0,0],[7,0,26,0.25, "easeOutCubic"],[-16,10,0,1, "easeInOutCubic"]],
+					_color: (color) ? color : [[1, 1, 1, 1, 0]],
+					_definitePosition: [[0, 0, 0, 0], [7, 0, 26, 0.25, "easeOutCubic"], [-16, 10, 0, 1, "easeInOutCubic"]],
 					_rotation: [
-						[0,0,0,0],
-						[0,0,180,0.5, "splineCatmullRom"],
-						[0,0,360,1, "splineCatmullRom"],
+						[0, 0, 0, 0],
+						[0, 0, 180, 0.5, "splineCatmullRom"],
+						[0, 0, 360, 1, "splineCatmullRom"],
 					],
 					_localRotation: [
-							[
-								getRndInteger(-0, 0),
-								getRndInteger(-0, 0),
-								getRndInteger(-0, 0),
-								0
-							],
-							[
-								getRndInteger(-0, 0),
-								getRndInteger(-0, 0),
-								getRndInteger(-0, 0),
-								1
-							]
-								],
-					_dissolve: [[0,0],[1,0.1],[1,0.9],[0,1]],
-					_scale: [[1,1,1,0],[1,1,100,1]]
+						[
+							getRndInteger(-0, 0),
+							getRndInteger(-0, 0),
+							getRndInteger(-0, 0),
+							0
+						],
+						[
+							getRndInteger(-0, 0),
+							getRndInteger(-0, 0),
+							getRndInteger(-0, 0),
+							1
+						]
+					],
+					_dissolve: [[0, 0], [1, 0.1], [1, 0.9], [0, 1]],
+					_scale: [[1, 1, 1, 0], [1, 1, 100, 1]]
 				}
 			}
 		})
@@ -2964,50 +3091,50 @@ function partLoop(start, end, amount, color) {
 			_time: 0,
 			_type: "AssignTrackParent",
 			_data: {
-			  _childrenTracks: [trackL, trackR],
-			  _parentTrack: "trackLR"
+				_childrenTracks: [trackL, trackR],
+				_parentTrack: "trackLR"
 			}
 		})
 
 		_customEvents.push({
-			_time: 6-HJD,
+			_time: 6 - HJD,
 			_type: "AnimateTrack",
-			_data:{
+			_data: {
 				_track: "trackLR",
-				_duration: (134-6) + HJD,
-				_position: [[0,4,0,0],[0,4,-4,1]]
+				_duration: (134 - 6) + HJD,
+				_position: [[0, 4, 0, 0], [0, 4, -4, 1]]
 			}
 		})
-		
+
 		tracks.push("trackLR");
 
 	}
-	
+
 }
 
-partLoop(6, 134, 256, [[0,0.5,1,1,0],[0,2,1,2,0.5],[0,0,2,2,0.75]]);
+partLoop(6, 134, 256, [[0, 0.5, 1, 1, 0], [0, 2, 1, 2, 0.5], [0, 0, 2, 2, 0.75]]);
 
 for (let i = 0; i < ((134 - 6) / 4) - 1; i++) {
 	let track = `moveOut${i}`
-	let time = 12+4*i;
-	Circ(track, time, 2, 9, 16, 0.05, 0.05, 0, 4, 24, 0, time+2, [[0,0.25,2,-40,0]]);
+	let time = 12 + 4 * i;
+	Circ(track, time, 2, 9, 16, 0.05, 0.05, 0, 4, 24, 0, time + 2, [[0, 0.25, 2, -40, 0]]);
 
 	DisIn(track, time);
 
 	// spin(track, "spinAroundZ", time, time+8, 1, EL);
 
 	// for (let n = 0; n < (134 - 6) / 16; n++) {
-		_customEvents.push({
-			_time: time,
-			_type: "AnimateTrack",
-			_data:{
-				_track: track,
-				_duration: 2,
-				_position: [[0,0,12,0], [0,0,-24,1]],
-				_scale: [[0.01,0.01,10,0],[0.01,0.01,50,1]]
-			}
-		})
-		
+	_customEvents.push({
+		_time: time,
+		_type: "AnimateTrack",
+		_data: {
+			_track: track,
+			_duration: 2,
+			_position: [[0, 0, 12, 0], [0, 0, -24, 1]],
+			_scale: [[0.01, 0.01, 10, 0], [0.01, 0.01, 50, 1]]
+		}
+	})
+
 	// }
 
 	tracks.push(track);
@@ -3104,49 +3231,49 @@ function path(start, end, color) {
 	for (let i = 0; i < amount; i++) {
 		let track = `path,${start},${i}`;
 
-		flashColor(track, start+i, 1, color, EL);	
-		DisInS(track, start+i, 8, 0.5);
-		DisOut(track, end+0.5);
+		flashColor(track, start + i, 1, color, EL);
+		DisInS(track, start + i, 8, 0.5);
+		DisOut(track, end + 0.5);
 
 		_customEvents.push({
 			_time: 0,
 			_type: "AssignTrackParent",
 			_data: {
-			  _childrenTracks: [track],
-			  _parentTrack: "allTrack"
+				_childrenTracks: [track],
+				_parentTrack: "allTrack"
 			}
 		})
 
 		_obstacles.push({
-			_time: (start+HJD)+i,
+			_time: (start + HJD) + i,
 			_duration: dur,
 			_lineIndex: 0,
 			_type: 0,
 			_width: 0,
-			_customData:{
+			_customData: {
 				_interactable: false,
 				_track: track,
-				_scale: [6,0.05,size],
-				_rotation: [0,0,0],
-				_localRotation: [0,0,0],
-				_position: [-3,-0.1],
+				_scale: [6, 0.05, size],
+				_rotation: [0, 0, 0],
+				_localRotation: [0, 0, 0],
+				_position: [-3, -0.1],
 				_animation: {
-					_color: (color) ? color : [[1,1,1,1,0]],
-					_definitePosition: [[0,0,0,0]],
-					_dissolve: [[1,0.6],[0,0.75]]
+					_color: (color) ? color : [[1, 1, 1, 1, 0]],
+					_definitePosition: [[0, 0, 0, 0]],
+					_dissolve: [[1, 0.6], [0, 0.75]]
 				}
 			}
 		})
 
 		_customEvents.push({
-			_time: (start-(1/offs))+i,
+			_time: (start - (1 / offs)) + i,
 			_type: "AnimateTrack",
-			_data:{
+			_data: {
 				_track: track,
 				_duration: dur,
-				_position: [[(tog)?sideAmount:-sideAmount,0,20,0],[0,0,-size*2,1]]
+				_position: [[(tog) ? sideAmount : -sideAmount, 0, 20, 0], [0, 0, -size * 2, 1]]
 			}
-		})	
+		})
 
 		tracks.push(track);
 
@@ -3163,50 +3290,50 @@ function flashPath(start, end, color) {
 	for (let i = 0; i < amount; i++) {
 		let track = `path,${start},${i}`;
 
-		flashColor(track, start+i, 1, color, EL);	
-		DisInS(track, start+i, 8, 0.5);
-		DisOut(track, end+0.5);
+		flashColor(track, start + i, 1, color, EL);
+		DisInS(track, start + i, 8, 0.5);
+		DisOut(track, end + 0.5);
 		DisIn("lightPath", start);
 
 		_customEvents.push({
 			_time: 0,
 			_type: "AssignTrackParent",
 			_data: {
-			  _childrenTracks: [track],
-			  _parentTrack: "allTrack"
+				_childrenTracks: [track],
+				_parentTrack: "allTrack"
 			}
 		})
 
 		_obstacles.push({
-			_time: (start+HJD)+i,
+			_time: (start + HJD) + i,
 			_duration: dur,
 			_lineIndex: 0,
 			_type: 0,
 			_width: 0,
-			_customData:{
+			_customData: {
 				_interactable: false,
 				_track: [track, "lightPath"],
-				_scale: [6,0.05,size],
-				_rotation: [0,0,0],
-				_localRotation: [0,0,0],
-				_position: [-3,-0.1],
+				_scale: [6, 0.05, size],
+				_rotation: [0, 0, 0],
+				_localRotation: [0, 0, 0],
+				_position: [-3, -0.1],
 				_animation: {
-					_definitePosition: [[0,0,0,0]],
-					_dissolve: [[1,0.6],[0,0.75]]
+					_definitePosition: [[0, 0, 0, 0]],
+					_dissolve: [[1, 0.6], [0, 0.75]]
 				}
 			}
 		})
 
-		flashColor("lightPath", start+2*i, 2, [[3,3,3,3,0],[0,0,0,1,1]], EL);
+		flashColor("lightPath", start + 2 * i, 2, [[3, 3, 3, 3, 0], [0, 0, 0, 1, 1]], EL);
 
 		_customEvents.push({
-			_time: (start-(1/offs))+i,
+			_time: (start - (1 / offs)) + i,
 			_type: "AnimateTrack",
-			_data:{
+			_data: {
 				_track: track,
 				_duration: dur,
-				_position: [[(tog)?sideAmount:-sideAmount,0,16,0],[0,0,-size*2,1]],
-				_rotation: [[0,getRndInteger(-45,45),0,0],[0,0,0,1/offs, "easeOutCubic"]]
+				_position: [[(tog) ? sideAmount : -sideAmount, 0, 16, 0], [0, 0, -size * 2, 1]],
+				_rotation: [[0, getRndInteger(-45, 45), 0, 0], [0, 0, 0, 1 / offs, "easeOutCubic"]]
 			}
 		})
 
@@ -3216,34 +3343,34 @@ function flashPath(start, end, color) {
 	}
 }
 
-path(134, 190, [[0,0,3,3,0],[1,1,1,0.5,1, "easeOutQuint"]]);
+path(134, 190, [[0, 0, 3, 3, 0], [1, 1, 1, 0.5, 1, "easeOutQuint"]]);
 
-flashPath(198-1, 254, [[1,1,1,1,0],[0.1,1,2,4,1]]);
+flashPath(198 - 1, 254, [[1, 1, 1, 1, 0], [0.1, 1, 2, 4, 1]]);
 
 //#endregion
 
 //#region Circle Rise
-function circleRise(start, end, dens, color){
-	let rndRotX = getRndInteger(-360 ,360);
-	let rndRotY = getRndInteger(-360 ,360);
-	let rndRotZ = getRndInteger(-360 ,360);
-	let rndRotX2 = getRndInteger(-360 ,360);
-	let rndRotY2 = getRndInteger(-360 ,360);
-	let rndRotZ2 = getRndInteger(-360 ,360);
+function circleRise(start, end, dens, color) {
+	let rndRotX = getRndInteger(-360, 360);
+	let rndRotY = getRndInteger(-360, 360);
+	let rndRotZ = getRndInteger(-360, 360);
+	let rndRotX2 = getRndInteger(-360, 360);
+	let rndRotY2 = getRndInteger(-360, 360);
+	let rndRotZ2 = getRndInteger(-360, 360);
 	for (let i = 0; i < dens; i++) {
 		let track = `circleRise,${start},${i}`;
 		let dur = (end - start);
 		let offs = (dur / dens) * i;
-		Circ(track, start+offs, dur, 80, 16, 5, 5, 0, 0, -1, 0, start+i, color);
-		
+		Circ(track, start + offs, dur, 80, 16, 5, 5, 0, 0, -1, 0, start + i, color);
+
 		_customEvents.push({
-			_time: (start-HJD)+offs,
+			_time: (start - HJD) + offs,
 			_type: "AnimateTrack",
-			_data:{
+			_data: {
 				_track: track,
 				_duration: 2,
-				_rotation: [[rndRotX,rndRotY,rndRotZ,0],[rndRotX2,rndRotY2,rndRotZ2,0.5, "easeOutCirc"]],
-				_position: [[0,0,120,0],[0,0,-120,1]]
+				_rotation: [[rndRotX, rndRotY, rndRotZ, 0], [rndRotX2, rndRotY2, rndRotZ2, 0.5, "easeOutCirc"]],
+				_position: [[0, 0, 120, 0], [0, 0, -120, 1]]
 			}
 		})
 
@@ -3267,28 +3394,28 @@ function lines(start, end, amount, color) {
 	for (let i = 0; i < amount; i++) {
 		let track = `lines,${start}`;
 		_obstacles.push({
-			_time: start+HJD,
+			_time: start + HJD,
 			_duration: dur,
 			_lineIndex: 0,
 			_type: 0,
 			_width: 0,
-			_customData:{
+			_customData: {
 				_interactable: false,
 				_track: track,
-				_scale: [0.05,100,0.05],
-				_rotation: [0,0,0],
-				_localRotation: [0,0,0],
-				_position: [-16.025,0],
+				_scale: [0.05, 100, 0.05],
+				_rotation: [0, 0, 0],
+				_localRotation: [0, 0, 0],
+				_position: [-16.025, 0],
 				_animation: {
-					_color: (color) ? color : [[1,1,1,1,0]],
-					_definitePosition: [[0,0,100,0],[0,0,10,1, "easeOutCubic"]],
-					_rotation: [[0,0+(360/32)*i,0,0],[0,360+(360/32)*i,0,1, "easeInOutCubic"]],
-					_localRotation: [[0,0,0+(360/32)*i,0],[0,0,360+(360/32)*i,1, "easeInOutCubic"]],
-					_dissolve: [[0,0],[1,0.25],[1,0.75],[0,1]]
+					_color: (color) ? color : [[1, 1, 1, 1, 0]],
+					_definitePosition: [[0, 0, 100, 0], [0, 0, 10, 1, "easeOutCubic"]],
+					_rotation: [[0, 0 + (360 / 32) * i, 0, 0], [0, 360 + (360 / 32) * i, 0, 1, "easeInOutCubic"]],
+					_localRotation: [[0, 0, 0 + (360 / 32) * i, 0], [0, 0, 360 + (360 / 32) * i, 1, "easeInOutCubic"]],
+					_dissolve: [[0, 0], [1, 0.25], [1, 0.75], [0, 1]]
 				}
 			}
 		})
-		
+
 		// _customEvents.push({
 		// 	_time: 0,
 		// 	_type: "AssignTrackParent",
@@ -3297,7 +3424,7 @@ function lines(start, end, amount, color) {
 		// 	  _parentTrack: `linesP,${start}`
 		// 	}
 		// })
-		
+
 		// _customEvents.push({
 		// 	_time: 4,
 		// 	_type: "AnimateTrack",
@@ -3307,7 +3434,7 @@ function lines(start, end, amount, color) {
 		// 		_rotation: [[0,0,0,1]]
 		// 	}
 		// })
-		
+
 		tracks.push(track);
 
 	}
@@ -3318,28 +3445,28 @@ function lines2(start, end, amount, color) {
 	for (let i = 0; i < amount; i++) {
 		let track = `lines,${start}`;
 		_obstacles.push({
-			_time: start+HJD,
+			_time: start + HJD,
 			_duration: dur,
 			_lineIndex: 0,
 			_type: 0,
 			_width: 0,
-			_customData:{
+			_customData: {
 				_interactable: false,
 				_track: track,
-				_scale: [0.05,100,0.05],
-				_rotation: [0,0,0],
-				_localRotation: [0,0,0],
-				_position: [-16.025,0],
+				_scale: [0.05, 100, 0.05],
+				_rotation: [0, 0, 0],
+				_localRotation: [0, 0, 0],
+				_position: [-16.025, 0],
 				_animation: {
-					_color: (color) ? color : [[1,1,1,1,0]],
-					_definitePosition: [[0,0,100,0],[0,0,25,1, "easeOutCubic"]],
-					_rotation: [[0,0-(360/32)*i,0,0],[0,90-(360/32)*i,0,1, "easeInOutCubic"]],
-					_localRotation: [[0,0,0,0],[0,0,360-(360/32)*i,1, "easeInOutCubic"]],
-					_dissolve: [[0,0],[1,0.25],[1,0.75],[0,1]]
+					_color: (color) ? color : [[1, 1, 1, 1, 0]],
+					_definitePosition: [[0, 0, 100, 0], [0, 0, 25, 1, "easeOutCubic"]],
+					_rotation: [[0, 0 - (360 / 32) * i, 0, 0], [0, 90 - (360 / 32) * i, 0, 1, "easeInOutCubic"]],
+					_localRotation: [[0, 0, 0, 0], [0, 0, 360 - (360 / 32) * i, 1, "easeInOutCubic"]],
+					_dissolve: [[0, 0], [1, 0.25], [1, 0.75], [0, 1]]
 				}
 			}
 		})
-		
+
 		// _customEvents.push({
 		// 	_time: 0,
 		// 	_type: "AssignTrackParent",
@@ -3348,7 +3475,7 @@ function lines2(start, end, amount, color) {
 		// 	  _parentTrack: `linesP,${start}`
 		// 	}
 		// })
-		
+
 		// _customEvents.push({
 		// 	_time: 4,
 		// 	_type: "AnimateTrack",
@@ -3358,7 +3485,7 @@ function lines2(start, end, amount, color) {
 		// 		_rotation: [[0,0,0,1]]
 		// 	}
 		// })
-		
+
 		tracks.push(track);
 
 	}
@@ -3369,51 +3496,51 @@ function lines3(start, end, amount, color) {
 	for (let i = 0; i < amount; i++) {
 		let track = `lines,${start}`;
 		_obstacles.push({
-			_time: start+HJD,
+			_time: start + HJD,
 			_duration: dur,
 			_lineIndex: 0,
 			_type: 0,
 			_width: 0,
-			_customData:{
+			_customData: {
 				_interactable: false,
 				_track: track,
-				_scale: [0.05,100,0.05],
-				_rotation: [0,0,0],
-				_localRotation: [0,0,0],
-				_position: [-16.025,0],
+				_scale: [0.05, 100, 0.05],
+				_rotation: [0, 0, 0],
+				_localRotation: [0, 0, 0],
+				_position: [-16.025, 0],
 				_animation: {
-					_color: (color) ? color : [[1,1,1,1,0]],
-					_definitePosition: [[0,0,150,0],[0,0,50,1, "easeOutCubic"]],
-					_rotation: [[0,0-(360/32)*i,0,0],[0,45-(360/32)*i,0,1, "easeInOutCubic"]],
-					_localRotation: [[0,0,0,0],[0,360-(360/32)*i,360-(360/32)*i,1, "easeOutCubic"]],
-					_dissolve: [[0,0],[1,0.25],[1,0.75],[0,1]]
+					_color: (color) ? color : [[1, 1, 1, 1, 0]],
+					_definitePosition: [[0, 0, 150, 0], [0, 0, 50, 1, "easeOutCubic"]],
+					_rotation: [[0, 0 - (360 / 32) * i, 0, 0], [0, 45 - (360 / 32) * i, 0, 1, "easeInOutCubic"]],
+					_localRotation: [[0, 0, 0, 0], [0, 360 - (360 / 32) * i, 360 - (360 / 32) * i, 1, "easeOutCubic"]],
+					_dissolve: [[0, 0], [1, 0.25], [1, 0.75], [0, 1]]
 				}
 			}
 		})
-		
+
 		_customEvents.push({
 			_time: 0,
 			_type: "AssignTrackParent",
 			_data: {
-			  _childrenTracks: [track],
-			  _parentTrack: `linesP,${start}`
+				_childrenTracks: [track],
+				_parentTrack: `linesP,${start}`
 			}
 		})
 
-		localSpin(`linesP,${start}`, "spinAroundYneg", start+HJD, end, 2, EL);
-		
+		localSpin(`linesP,${start}`, "spinAroundYneg", start + HJD, end, 2, EL);
+
 		tracks.push(track);
 
 	}
 }
 
-lines(142, 150, 32, [[1,1,1,1,0],[1,0.5,0,10,1]]);
-lines2(158, 178, 32, [[0,0,0,0,0],[4,2,0.125,6,0.25, "easeInOutCubic"],[8,8,16,8,0.75, "easeOutQuint"],[1,1,1,1,1]]);
+lines(142, 150, 32, [[1, 1, 1, 1, 0], [1, 0.5, 0, 10, 1]]);
+lines2(158, 178, 32, [[0, 0, 0, 0, 0], [4, 2, 0.125, 6, 0.25, "easeInOutCubic"], [8, 8, 16, 8, 0.75, "easeOutQuint"], [1, 1, 1, 1, 1]]);
 
-lines(190, 198, 16, [[0,0.5,2,4,0],[1,1,0.5,1,1]]);
-lines2(190, 198, 16, [[1,1,0.5,1,0],[0,0.5,2,4,1]]);
+lines(190, 198, 16, [[0, 0.5, 2, 4, 0], [1, 1, 0.5, 1, 1]]);
+lines2(190, 198, 16, [[1, 1, 0.5, 1, 0], [0, 0.5, 2, 4, 1]]);
 
-lines3(214, 234, 32, [[0,0,0,0,0],[4,2,0.125,6,0.25, "easeOutCubic"],[8,8,16,8,0.75, "easeInQuart"],[1,1,1,1,1]]);
+lines3(214, 234, 32, [[0, 0, 0, 0, 0], [4, 2, 0.125, 6, 0.25, "easeOutCubic"], [8, 8, 16, 8, 0.75, "easeInQuart"], [1, 1, 1, 1, 1]]);
 
 //#endregion
 
@@ -3425,33 +3552,33 @@ function sideObjects(start, end, amount, color) {
 		let track = `sideObjects,${start},${i}`;
 		let dur = (end - start) + HJD;
 		let offs = (dur / amount) * i;
-		let x = (tog)? getRndInteger(-18, -9) : getRndInteger(9, 18);
+		let x = (tog) ? getRndInteger(-18, -9) : getRndInteger(9, 18);
 		let y = getRndInteger(-8, 16);
 		let y2 = getRndInteger(-16, 16);
 		let z = getRndInteger(20, 65);
 		_obstacles.push({
-			_time: (start+HJD)+offs,
+			_time: (start + HJD) + offs,
 			_duration: HJD,
 			_lineIndex: 0,
 			_type: 0,
 			_width: 0,
-			_customData:{
+			_customData: {
 				_interactable: false,
 				_track: track,
-				_scale: [0.05,getRndInteger(6, 12),getRndInteger(1, 6)],
-				_rotation: [0,0,0],
-				_localRotation: [0,0,0],
-				_position: [0,0],
+				_scale: [0.05, getRndInteger(6, 12), getRndInteger(1, 6)],
+				_rotation: [0, 0, 0],
+				_localRotation: [0, 0, 0],
+				_position: [0, 0],
 				_animation: {
-					_color: (color) ? color : [[1,1,1,1,0]],
-					_definitePosition: [[x,y,z,0],[x,y2,z,1]],
-					_dissolve: [[0,0],[1,0.15],[1,0.85],[0,1]],
-					_rotation: [[0,0,randomRotdir(),0],[0,0,0,1, "easeOutCubic"]],
-					_localRotation: [[0,randomRotdir(),0,0],[0,0,0,1, "easeOutElastic"]]
+					_color: (color) ? color : [[1, 1, 1, 1, 0]],
+					_definitePosition: [[x, y, z, 0], [x, y2, z, 1]],
+					_dissolve: [[0, 0], [1, 0.15], [1, 0.85], [0, 1]],
+					_rotation: [[0, 0, randomRotdir(), 0], [0, 0, 0, 1, "easeOutCubic"]],
+					_localRotation: [[0, randomRotdir(), 0, 0], [0, 0, 0, 1, "easeOutElastic"]]
 				}
 			}
 		})
-		
+
 		tracks.push(track);
 		tog = !tog;
 	}
@@ -3463,33 +3590,33 @@ function sideObjects2(start, end, amount, color) {
 		let track = `sideObjects,${start},${i}`;
 		let dur = (end - start) + HJD;
 		let offs = (dur / amount) * i;
-		let x = (tog)? getRndInteger(-16, -5) : getRndInteger(5, 16);
+		let x = (tog) ? getRndInteger(-16, -5) : getRndInteger(5, 16);
 		let y = getRndInteger(-8, 16);
 		let y2 = getRndInteger(-16, 16);
 		let z = getRndInteger(8, 24);
 		_obstacles.push({
-			_time: (start+HJD)+offs,
+			_time: (start + HJD) + offs,
 			_duration: HJD,
 			_lineIndex: 0,
 			_type: 0,
 			_width: 0,
-			_customData:{
+			_customData: {
 				_interactable: false,
 				_track: track,
-				_scale: [0.05,getRndInteger(8, 16),getRndInteger(1, 6)],
-				_rotation: [0,0,0],
-				_localRotation: [0,0,0],
-				_position: [0,0],
+				_scale: [0.05, getRndInteger(8, 16), getRndInteger(1, 6)],
+				_rotation: [0, 0, 0],
+				_localRotation: [0, 0, 0],
+				_position: [0, 0],
 				_animation: {
-					_color: (color) ? color : [[1,1,1,1,0]],
-					_definitePosition: [[x,y,z,0],[x,y2,z,1]],
-					_dissolve: [[0,0],[1,0.15],[1,0.85],[0,1]],
-					_rotation: [[0,0,randomRotdir(),0],[0,0,0,1, "easeOutCubic"]],
-					_localRotation: [[0,randomRotdir(),0,0],[0,0,0,1, "easeOutElastic"]]
+					_color: (color) ? color : [[1, 1, 1, 1, 0]],
+					_definitePosition: [[x, y, z, 0], [x, y2, z, 1]],
+					_dissolve: [[0, 0], [1, 0.15], [1, 0.85], [0, 1]],
+					_rotation: [[0, 0, randomRotdir(), 0], [0, 0, 0, 1, "easeOutCubic"]],
+					_localRotation: [[0, randomRotdir(), 0, 0], [0, 0, 0, 1, "easeOutElastic"]]
 				}
 			}
 		})
-		
+
 		tracks.push(track);
 		tog = !tog;
 	}
@@ -3536,7 +3663,7 @@ function sideObjects2(start, end, amount, color) {
 // 			  _parentTrack: "allSides22"
 // 			}
 // 		})
-		
+
 // 		_customEvents.push({
 // 			_time: start,
 // 			_type: "AnimateTrack",
@@ -3549,27 +3676,27 @@ function sideObjects2(start, end, amount, color) {
 // 		})
 
 // 		tracks.push("allSides22");
-		
+
 // 	}
 
 // }
 
 // sideObjects22(198, 198+64, 64);
 
-filterednotes = _notes.filter(n => n._time >= 134 && n._time <= 190-HJD);
+filterednotes = _notes.filter(n => n._time >= 134 && n._time <= 190 - HJD);
 filterednotes.forEach(note => {
 	if (note._type == 0) {
-		sideObjects(note._time+HJD,(note._time+HJD)+1, 2, [[1,1,1,2,0],[0,0,0,0,1]]);
+		sideObjects(note._time + HJD, (note._time + HJD) + 1, 2, [[1, 1, 1, 2, 0], [0, 0, 0, 0, 1]]);
 
 	}
 
 })
 
-filterednotes = _notes.filter(n => n._time >= 134 && n._time <= 190-HJD);
+filterednotes = _notes.filter(n => n._time >= 134 && n._time <= 190 - HJD);
 filterednotes.forEach(note => {
 	if (note._type == 1) {
-		sideObjects2(note._time+HJD,(note._time+HJD)+1, 2, [[1,1,1,2,0],[0,0,0,0,1]]);
-		
+		sideObjects2(note._time + HJD, (note._time + HJD) + 1, 2, [[1, 1, 1, 2, 0], [0, 0, 0, 0, 1]]);
+
 	}
 
 })
@@ -3578,7 +3705,7 @@ filterednotes.forEach(note => {
 
 //#region how when the (tri path)
 
-let times = (254 - 198)-1;
+let times = (254 - 198) - 1;
 for (let i = 0; i < times; i++) {
 	let start = 198;
 	let end = 254;
@@ -3586,8 +3713,8 @@ for (let i = 0; i < times; i++) {
 
 	let offs = (end - start) / times;
 	let track = `triPath,${i}`;
-	CircMove(track, (start)+i*offs, HJD*2, 11, 3, 0.05, 0.05, 0, 0, 0, 90+(360/16)*i, [[0.5,3.5,10,11,0]], 2, 20);
-	DisInS(track, (start)+i*offs, 16, 0.545);
+	CircMove(track, (start) + i * offs, HJD * 2, 11, 3, 0.05, 0.05, 0, 0, 0, 90 + (360 / 16) * i, [[0.5, 3.5, 10, 11, 0]], 2, 20);
+	DisInS(track, (start) + i * offs, 16, 0.545);
 
 	// _customEvents.push({
 	// 	_time: 0,
@@ -3605,8 +3732,8 @@ for (let i = 0; i < times; i++) {
 		_data: {
 			_track: track,
 			_duration: 1,
-			_rotation: [[20,20,0,0.25],[0,0,0,0.75]],
-			_scale: [[0.1,0.1,0.1,0],[1,1,1,0.125]]
+			_rotation: [[20, 20, 0, 0.25], [0, 0, 0, 0.75]],
+			_scale: [[0.1, 0.1, 0.1, 0], [1, 1, 1, 0.125]]
 			// _noteJumpStartBeatOffset: 4,
 			// _startNoteJumpMovementSpeed: 60
 		}
@@ -3625,18 +3752,18 @@ for (let i = 0; i < times; i++) {
 
 	for (let a = 0; a < times2; a++) {
 		_customEvents.push({
-			_time: start+a*((oat/times2)+(HJD*2)/4),
+			_time: start + a * ((oat / times2) + (HJD * 2) / 4),
 			_type: "AnimateTrack",
 			_data: {
 				_track: "triPathPP",
-				_duration: ((oat/times2)+(HJD*2)/4)+HJD,
+				_duration: ((oat / times2) + (HJD * 2) / 4) + HJD,
 				_rotation: "spinAroundZ",
-				_position: [[0,0,55,0]]
+				_position: [[0, 0, 55, 0]]
 			}
 		})
-		
+
 	}
-	
+
 	tracks.push("triPathPP");
 }
 
@@ -3653,36 +3780,36 @@ function square(track, start, end, scale, rots, color) {
 		_lineIndex: 0,
 		_type: 0,
 		_width: 0,
-		_customData:{
+		_customData: {
 			_interactable: false,
 			_track: `${track},${start}`,
-			_scale: [scale,0.05,scale],
-			_rotation: [0,0,0],
-			_localRotation: [0,0,0],
-			_position: [-0.5,-0.1],
+			_scale: [scale, 0.05, scale],
+			_rotation: [0, 0, 0],
+			_localRotation: [0, 0, 0],
+			_position: [-0.5, -0.1],
 			_animation: {
-				_color: (color) ? color : [[1,1,1,10,0]],
-				_definitePosition: [[0,0,-(HJD),0]]
+				_color: (color) ? color : [[1, 1, 1, 10, 0]],
+				_definitePosition: [[0, 0, -(HJD), 0]]
 			}
 		}
 	})
-	
+
 	_customEvents.push({
 		_time: 0,
 		_type: "AssignTrackParent",
 		_data: {
-		  _childrenTracks: [`${track},${start}`],
-		  _parentTrack: track
+			_childrenTracks: [`${track},${start}`],
+			_parentTrack: track
 		}
 	})
 
 	_customEvents.push({
 		_time: 0,
 		_type: "AnimateTrack",
-		_data:{
+		_data: {
 			_track: track,
 			_duration: 999,
-			_rotation: [[0,rots,0,0]]
+			_rotation: [[0, rots, 0, 0]]
 		}
 	})
 }
@@ -3692,43 +3819,43 @@ function squareRow(track, start, end, amount, color) {
 		let tracks = `${track},${i}`;
 		let ha = amount / 2;
 		square(tracks, start, end, 1, -45, color)
-		
-		_customEvents.push({
-			_time: start-HJD,
-			_type: "AnimateTrack",
-			_data:{
-				_track: tracks,
-				_duration: (end - start) + HJD,
-				_position: [[(-ha)+i,0,(-ha)+i,0]]
-			}
-		}) 
 
 		_customEvents.push({
-			_time: 0,
-			_type: "AssignTrackParent",
+			_time: start - HJD,
+			_type: "AnimateTrack",
 			_data: {
-			  _childrenTracks: [tracks],
-			  _parentTrack: "trackSquare2"
-			}
-		},{
-			_time: 0,
-			_type: "AssignTrackParent",
-			_data: {
-			  _childrenTracks: ["trackSquare2"],
-			  _parentTrack: track
+				_track: tracks,
+				_duration: (end - start) + HJD,
+				_position: [[(-ha) + i, 0, (-ha) + i, 0]]
 			}
 		})
 
 		_customEvents.push({
-			_time: start-HJD,
+			_time: 0,
+			_type: "AssignTrackParent",
+			_data: {
+				_childrenTracks: [tracks],
+				_parentTrack: "trackSquare2"
+			}
+		}, {
+			_time: 0,
+			_type: "AssignTrackParent",
+			_data: {
+				_childrenTracks: ["trackSquare2"],
+				_parentTrack: track
+			}
+		})
+
+		_customEvents.push({
+			_time: start - HJD,
 			_type: "AnimateTrack",
-			_data:{
+			_data: {
 				_track: "trackSquare2",
 				_duration: (end - start) + HJD,
-				_position: [[0,0,0,0]],
-				_rotation: [[0,90,0,0]]
+				_position: [[0, 0, 0, 0]],
+				_rotation: [[0, 90, 0, 0]]
 			}
-		}) 
+		})
 
 	}
 
@@ -3736,46 +3863,46 @@ function squareRow(track, start, end, amount, color) {
 
 function squareColumn(track, start, end, amount, color) {
 	// for (let i = 0; i <= amount; i++) {
-		let tracks = `${track},${i}`;
-		let ha = amount / 2;
-		square(tracks, start, end, 1, -45, color)
-		
-		_customEvents.push({
-			_time: start-HJD, //FINISH IT
-			_type: "AnimateTrack",
-			_data:{
-				_track: tracks,
-				_duration: (end - start) + HJD,
-				_position: [[(-ha)+i,0,(-ha)+i,0]]
-			}
-		}) 
+	let tracks = `${track},${i}`;
+	let ha = amount / 2;
+	square(tracks, start, end, 1, -45, color)
 
-		_customEvents.push({
-			_time: 0,
-			_type: "AssignTrackParent",
-			_data: {
-			  _childrenTracks: [tracks],
-			  _parentTrack: "trackSquare2"
-			}
-		},{
-			_time: 0,
-			_type: "AssignTrackParent",
-			_data: {
-			  _childrenTracks: ["trackSquare2"],
-			  _parentTrack: track
-			}
-		})
+	_customEvents.push({
+		_time: start - HJD, //FINISH IT
+		_type: "AnimateTrack",
+		_data: {
+			_track: tracks,
+			_duration: (end - start) + HJD,
+			_position: [[(-ha) + i, 0, (-ha) + i, 0]]
+		}
+	})
 
-		_customEvents.push({
-			_time: start-HJD,
-			_type: "AnimateTrack",
-			_data:{
-				_track: "trackSquare2",
-				_duration: (end - start) + HJD,
-				_position: [[0,0,0,0]],
-				_rotation: [[0,90,0,0]]
-			}
-		}) 
+	_customEvents.push({
+		_time: 0,
+		_type: "AssignTrackParent",
+		_data: {
+			_childrenTracks: [tracks],
+			_parentTrack: "trackSquare2"
+		}
+	}, {
+		_time: 0,
+		_type: "AssignTrackParent",
+		_data: {
+			_childrenTracks: ["trackSquare2"],
+			_parentTrack: track
+		}
+	})
+
+	_customEvents.push({
+		_time: start - HJD,
+		_type: "AnimateTrack",
+		_data: {
+			_track: "trackSquare2",
+			_duration: (end - start) + HJD,
+			_position: [[0, 0, 0, 0]],
+			_rotation: [[0, 90, 0, 0]]
+		}
+	})
 
 	// }
 
@@ -3797,77 +3924,77 @@ function tunnelThing(start, end) {
 			let partTrackk = `tunnelPartTrack,${i},${x},${start}`;
 			let partTrackkP = `tunnelPartTrackP,${i},${x},${start}`;
 			let partTrackkPP = `tunnelPartTrackPP,${i},${x},${start}`;
-			let dur = (end - start) - (HJD+1.075);
-			Circ(partTrackk, start+0.01*i+0.01*x, dur, 6, 3, 0.5, 0.05, 0, 0, -1, 0, (end+0.1*i)-(HJD+0.25), [[2-0.25*i,2,10+0.125*i,4+0.5*i,0]]);
+			let dur = (end - start) - (HJD + 1.075);
+			Circ(partTrackk, start + 0.01 * i + 0.01 * x, dur, 6, 3, 0.5, 0.05, 0, 0, -1, 0, (end + 0.1 * i) - (HJD + 0.25), [[2 - 0.25 * i, 2, 10 + 0.125 * i, 4 + 0.5 * i, 0]]);
 			DisIn(partTrackk, start);
-	
+
 			_customEvents.push({
 				_time: 0,
 				_type: "AnimateTrack",
-				_data:{
+				_data: {
 					_track: partTrackk,
 					_duration: 2,
-					_rotation: [[-90+i,0,-90,1]],
-					_localRotation: [[0-(360/8)*i,0+(360/8)*i,0+(360/8)*i,0]]
+					_rotation: [[-90 + i, 0, -90, 1]],
+					_localRotation: [[0 - (360 / 8) * i, 0 + (360 / 8) * i, 0 + (360 / 8) * i, 0]]
 				}
 			})
-	
+
 			_customEvents.push({
 				_time: 0,
 				_type: "AssignTrackParent",
 				_data: {
-				  _childrenTracks: [partTrackk],
-				  _parentTrack: partTrackkP
+					_childrenTracks: [partTrackk],
+					_parentTrack: partTrackkP
 				}
-			},{
+			}, {
 				_time: 0,
 				_type: "AssignTrackParent",
 				_data: {
-				  _childrenTracks: [partTrackkP],
-				  _parentTrack: partTrackkPP
+					_childrenTracks: [partTrackkP],
+					_parentTrack: partTrackkPP
 				}
-			},{
+			}, {
 				_time: 0,
 				_type: "AssignTrackParent",
 				_data: {
-				  _childrenTracks: [partTrackkPP],
-				  _parentTrack: "allTunnelTrackPush"
+					_childrenTracks: [partTrackkPP],
+					_parentTrack: "allTunnelTrackPush"
 				}
 			})
-			
+
 			_customEvents.push({
 				_time: 0,
 				_type: "AnimateTrack",
-				_data:{
+				_data: {
 					_track: partTrackkP,
-					_scale: [[1,1,1+1*i,0]],
-					_position: [[0,0+3*i,16+12*i,0]],
-					_rotation: [[10,0,0+(11.25)*i,0]]
+					_scale: [[1, 1, 1 + 1 * i, 0]],
+					_position: [[0, 0 + 3 * i, 16 + 12 * i, 0]],
+					_rotation: [[10, 0, 0 + (11.25) * i, 0]]
 				}
 			})
-	
+
 			_customEvents.push({
 				_time: start,
 				_type: "AnimateTrack",
-				_data:{
+				_data: {
 					_track: partTrackkPP,
-					_duration: dur+HJD,
-					_position: [[0,50,20-(2)*i,0],[0,50,-538,1]],
-					_rotation: [[0,0,90+90*x+(11.25)*i,0]],
-					_scale: [[0.5,0.5,0.05,0],[2,2,4,0.25, "easeOutCubic"]]
+					_duration: dur + HJD,
+					_position: [[0, 50, 20 - (2) * i, 0], [0, 50, -538, 1]],
+					_rotation: [[0, 0, 90 + 90 * x + (11.25) * i, 0]],
+					_scale: [[0.5, 0.5, 0.05, 0], [2, 2, 4, 0.25, "easeOutCubic"]]
 				}
 			})
-			localSpin(partTrackkPP, "spinAroundZneg", start-0.5, end+HJD+0.5, 3, EL);
-	
+			localSpin(partTrackkPP, "spinAroundZneg", start - 0.5, end + HJD + 0.5, 3, EL);
+
 			tracks.push("allTunnelTrackPush");
-			
+
 		}
-		
+
 	}
 
 }
 
-tunnelThing(550-0.25,582);
+tunnelThing(550 - 0.25, 582);
 
 //#endregion
 
@@ -3938,77 +4065,77 @@ function tunnelThing15(start, end) {
 			let partTrackkP = `tunnelPartTrackP15,${i},${x},${start}`;
 			let partTrackkPP = `tunnelPartTrackPP15,${i},${x},${start}`;
 			let dur = (end - start) - 0.5;
-			Circ(partTrackk, (start-(HJD*1.75))+0.01*i+0.01*x, dur, 6, 3, 0.5, 0.05, 0, 0, -1, 0, 9999, [[2-0.035*i,1+0.1*i,2.5+0.125*i,-16+4*i,0]]);
+			Circ(partTrackk, (start - (HJD * 1.75)) + 0.01 * i + 0.01 * x, dur, 6, 3, 0.5, 0.05, 0, 0, -1, 0, 9999, [[2 - 0.035 * i, 1 + 0.1 * i, 2.5 + 0.125 * i, -16 + 4 * i, 0]]);
 			DisInS(partTrackk, start, 16, 0.5);
-	
+
 			_customEvents.push({
 				_time: 0,
 				_type: "AnimateTrack",
-				_data:{
+				_data: {
 					_track: partTrackk,
 					_duration: 2,
-					_rotation: [[-90+i,0,-90,1]]
-				}
-			})
-	
-			_customEvents.push({
-				_time: 0,
-				_type: "AssignTrackParent",
-				_data: {
-				  _childrenTracks: [partTrackk],
-				  _parentTrack: partTrackkP
-				}
-			},{
-				_time: 0,
-				_type: "AssignTrackParent",
-				_data: {
-				  _childrenTracks: [partTrackkP],
-				  _parentTrack: partTrackkPP
-				}
-			},{
-				_time: 0,
-				_type: "AssignTrackParent",
-				_data: {
-				  _childrenTracks: [partTrackkPP],
-				  _parentTrack: "allTunnelTrackPush15"
+					_rotation: [[-90 + i, 0, -90, 1]]
 				}
 			})
 
-			localSpin(partTrackkP, "spinAroundZneg", start, end+HJD, 2, EL);
-			
+			_customEvents.push({
+				_time: 0,
+				_type: "AssignTrackParent",
+				_data: {
+					_childrenTracks: [partTrackk],
+					_parentTrack: partTrackkP
+				}
+			}, {
+				_time: 0,
+				_type: "AssignTrackParent",
+				_data: {
+					_childrenTracks: [partTrackkP],
+					_parentTrack: partTrackkPP
+				}
+			}, {
+				_time: 0,
+				_type: "AssignTrackParent",
+				_data: {
+					_childrenTracks: [partTrackkPP],
+					_parentTrack: "allTunnelTrackPush15"
+				}
+			})
+
+			localSpin(partTrackkP, "spinAroundZneg", start, end + HJD, 2, EL);
+
 			_customEvents.push({
 				_time: 0,
 				_type: "AnimateTrack",
-				_data:{
+				_data: {
 					_track: partTrackkP,
-					_scale: [[1,1,1+1*i,0]],
-					_position: [[0,0+3*i,16+16*i,0]],
-					_rotation: [[10,0,0+(11.25)*i,0]]
+					_scale: [[1, 1, 1 + 1 * i, 0]],
+					_position: [[0, 0 + 3 * i, 16 + 16 * i, 0]],
+					_rotation: [[10, 0, 0 + (11.25) * i, 0]]
 				}
 			})
-	
+
 			_customEvents.push({
-				_time: start-(HJD*2),
+				_time: start - (HJD * 2),
 				_type: "AnimateTrack",
-				_data:{
+				_data: {
 					_track: partTrackkPP,
-					_duration: dur+HJD,
-					_position: [[10,50,20,0],[10,50,-127,1]],
-					_rotation: [[0,0,90+120*x+(11.25)*i,0]],
-					_scale: [[0.5,0.5,0.05,0],[2,2+7,4,0.125, "easeOutCubic"]]
+					_duration: dur + HJD,
+					_position: [[10, 50, 20, 0], [10, 50, -127, 1]],
+					_rotation: [[0, 0, 90 + 120 * x + (11.25) * i, 0]],
+					_scale: [[0.5, 0.5, 0.05, 0], [2, 2 + 7, 4, 0.125, "easeOutCubic"]]
 				}
 			})
 			// localSpin(partTrackkPP, "spinAroundZneg", start, end+HJD, 3, EL);
-	
+
 			tracks.push("allTunnelTrackPush15");
-			
+
 		}
-		
+
 	}
 
 }
 
-tunnelThing15(614,646);
+tunnelThing15(614, 646);
 
 //#endregion
 
@@ -4020,8 +4147,8 @@ function tunnelThing2(start, end) {
 			let partTrackk = `tunnelPartTrack2,${i},${x},${start}`;
 			let partTrackkP = `tunnelPartTrackP2,${i},${x},${start}`;
 			let partTrackkPP = `tunnelPartTrackPP2,${i},${x},${start}`;
-			let dur = (end - start) - (HJD+1.075);
-			Circ(partTrackk, start+0.01*i+0.01*x, dur, 6, 3, 0.5, 0.05, 0, 0, -1, 0, (end+0.1*i)-(HJD+0.25), "Rainbow");
+			let dur = (end - start) - (HJD + 1.075);
+			Circ(partTrackk, start + 0.01 * i + 0.01 * x, dur, 6, 3, 0.5, 0.05, 0, 0, -1, 0, (end + 0.1 * i) - (HJD + 0.25), "Rainbow");
 			_customEvents.push({
 				_time: start - (16 / 2),
 				_type: "AnimateTrack",
@@ -4031,73 +4158,73 @@ function tunnelThing2(start, end) {
 					_dissolve: [[0, 0.499], [1, 0.5]]
 				}
 			})
-	
+
 			_customEvents.push({
 				_time: 0,
 				_type: "AnimateTrack",
-				_data:{
+				_data: {
 					_track: partTrackk,
 					_duration: 2,
-					_rotation: [[-90+i,0,-90,1]]
+					_rotation: [[-90 + i, 0, -90, 1]]
 				}
 			})
-	
+
 			_customEvents.push({
 				_time: 0,
 				_type: "AssignTrackParent",
 				_data: {
-				  _childrenTracks: [partTrackk],
-				  _parentTrack: partTrackkP
+					_childrenTracks: [partTrackk],
+					_parentTrack: partTrackkP
 				}
-			},{
+			}, {
 				_time: 0,
 				_type: "AssignTrackParent",
 				_data: {
-				  _childrenTracks: [partTrackkP],
-				  _parentTrack: partTrackkPP
+					_childrenTracks: [partTrackkP],
+					_parentTrack: partTrackkPP
 				}
-			},{
+			}, {
 				_time: 0,
 				_type: "AssignTrackParent",
 				_data: {
-				  _childrenTracks: [partTrackkPP],
-				  _parentTrack: "allTunnelTrackPush2"
+					_childrenTracks: [partTrackkPP],
+					_parentTrack: "allTunnelTrackPush2"
 				}
 			})
-			
+
 			_customEvents.push({
 				_time: 0,
 				_type: "AnimateTrack",
-				_data:{
+				_data: {
 					_track: partTrackkP,
-					_scale: [[1,1,1+1*i,0]],
-					_position: [[0,0+3*i,16+12*i,0]],
-					_rotation: [[10+(11.25)*i,0,0+(11.25)*i,0]]
+					_scale: [[1, 1, 1 + 1 * i, 0]],
+					_position: [[0, 0 + 3 * i, 16 + 12 * i, 0]],
+					_rotation: [[10 + (11.25) * i, 0, 0 + (11.25) * i, 0]]
 				}
 			})
-	
+
 			_customEvents.push({
-				_time: start-0.75,
+				_time: start - 0.75,
 				_type: "AnimateTrack",
-				_data:{
+				_data: {
 					_track: partTrackkPP,
-					_duration: dur+HJD,
-					_position: [[0,20,40,0],[0,20,-450,1]],
-					_rotation: [[0,180,90+90*x+(11.25)*i,0]],
-					_scale: [[1,1,0.05,0],[2,2,5,0.125, "easeOutCubic"]]
+					_duration: dur + HJD,
+					_position: [[0, 20, 40, 0], [0, 20, -450, 1]],
+					_rotation: [[0, 180, 90 + 90 * x + (11.25) * i, 0]],
+					_scale: [[1, 1, 0.05, 0], [2, 2, 5, 0.125, "easeOutCubic"]]
 				}
 			})
-			localSpin(partTrackkPP, "spinAroundZ", start+0.2, end+(HJD*2)+0.5, 2, EL);
-	
+			localSpin(partTrackkPP, "spinAroundZ", start + 0.2, end + (HJD * 2) + 0.5, 2, EL);
+
 			tracks.push("allTunnelTrackPush2");
-			
+
 		}
-		
+
 	}
 
 }
 
-tunnelThing2(678-0.25,710);
+tunnelThing2(678 - 0.25, 710);
 
 //#endregion
 
@@ -4107,8 +4234,8 @@ _customEvents.push({
 	_time: 0,
 	_type: "AssignTrackParent",
 	_data: {
-	  _childrenTracks: tracks,
-	  _parentTrack: "note"
+		_childrenTracks: tracks,
+		_parentTrack: "note"
 	}
 })
 
