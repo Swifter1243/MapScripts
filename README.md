@@ -1,3 +1,6 @@
+> [!WARNING]  
+> This repository has been archived. This is in favor of the [Vivify](https://exsii.totalbs.dev/) era of my work, which requires individual repositories. **Keep an eye on my page!**
+
 # MapScripts
 Scripts for all my maps weeeeeee
 
